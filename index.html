@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>折れ線グラフ学習アプリ</title>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #ff7e67;
+            --secondary-color: #4facfe;
+            --bg-gradient: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --text-color: #333333;
+            --grid-color: #a0c4ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none; /* テキスト選択防止 */
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        .app-container {
+            width: 95%;
+            max-width: 650px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: #4a4a4a;
+            text-align: center;
+        }
+
+        /* データ表のスタイル */
+        .data-table-wrapper {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            text-align: center;
+        }
+
+        th, td {
+            padding: 10px 5px;
+            border: 1px solid #ffb3c6;
+            font-size: 1.1rem;
+        }
+
+        th {
+            background-color: #ffccd5;
+            color: #d81b60;
+            font-weight: 700;
+            width: 25%;
+        }
+
+        td {
+            font-weight: 700;
+            width: 15%;
+            color: #333;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Canvasコンテナ */
+        .canvas-container {
+            width: 100%;
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            cursor: pointer;
+            touch-action: none;
+        }
+
+        /* 結果メッセージ表示用 */
+        .result-message {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        .result-message.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .correct-text { color: #ff3333; }
+        .wrong-text { color: #4facfe; }
+
+        /* コントロールボタン */
+        .controls {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 0;
+            font-size: 1.2rem;
+            font-family: inherit;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+        }
+
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff758c 0%, #ff7eb3 100%);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* タブのスタイル */
+        .tabs {
+            display: flex;
+            width: 100%;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--grid-color);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 0;
+            font-size: 1.1rem;
+            font-family: inherit;
+            font-weight: bold;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s ease;
+            border-radius: 12px 12px 0 0;
+        }
+        .tab-btn.active {
+            color: var(--primary-color);
+            background: rgba(255, 255, 255, 0.5);
+            border-bottom: 3px solid var(--primary-color);
+        }
+        .tab-content {
+            display: none;
+            width: 100%;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* --- 整理の仕方①タブ用の追加CSS --- */
+        .cross-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            text-align: center;
+            border: 2.5px solid #00bfff;
+        }
+        .cross-table th, .cross-table td {
+            border: 2.5px solid #00bfff;
+            padding: 10px 2px;
+            font-size: 1.6rem;
+        }
+        .cross-table th {
+            font-weight: 700;
+        }
+        .cross-table td {
+            font-weight: 700;
+            color: #444;
+        }
+        .bg-yellow { background-color: #ffffcc; }
+        .bg-pink { background-color: #ffccff; }
+        
+        .num-input {
+            width: 100%;
+            max-width: 65px;
+            height: 40px;
+            font-size: 1.4rem;
+            font-family: inherit;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #aaa;
+            border-radius: 6px;
+            color: #333;
+        }
+        .num-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            background-color: #fff0f0;
+        }
+        /* スピンボタン（上下矢印）を常に表示 */
+        .num-input::-webkit-outer-spin-button,
+        .num-input::-webkit-inner-spin-button {
+            opacity: 1;
+        }
+
+        #org-hanamaru {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 250px;
+            height: 250px;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 5;
+        }
+        #org-hanamaru.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        #org2-hanamaru {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 250px;
+            height: 250px;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 5;
+        }
+        #org2-hanamaru.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        /* --- 追加機能用のCSS --- */
+        .input-error {
+            background-color: #ffe6e6 !important;
+            border-color: #ff3333 !important;
+            color: #ff3333 !important;
+        }
+        .highlight {
+            background-color: #ccf2ff !important;
+        }
+        #streak-counter {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        /* スマホ向け調整 */
+        @media (max-width: 480px) {
+            h1 { font-size: 1.2rem; margin-bottom: 10px; }
+            th, td { padding: 8px 2px; font-size: 0.95rem; }
+            .btn { font-size: 1.1rem; padding: 12px 0; }
+            .app-container { padding: 15px; }
+            #streak-counter {
+                font-size: 1rem;
+                top: 10px;
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="streak-counter">連続正解: 0</div>
+    <h1>折れ線グラフを完成させよう！</h1>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('graph')">折れ線グラフ</button>
+        <button class="tab-btn" onclick="switchTab('organize')">整理の仕方①</button>
+        <button class="tab-btn" onclick="switchTab('organize2')">整理の仕方②</button>
+    </div>
+
+    <div id="tab-graph" class="tab-content active">
+        <div class="data-table-wrapper">
+            <table>
+                <tr>
+                    <th>年れい(才)</th>
+                    <td>5</td><td>6</td><td>7</td><td>8</td><td>9</td>
+                </tr>
+                <tr>
+                    <th>身長(cm)</th>
+                    <td id="val-0"></td>
+                    <td id="val-1"></td>
+                    <td id="val-2"></td>
+                    <td id="val-3"></td>
+                    <td id="val-4"></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="canvas-container">
+            <div id="result-msg" class="result-message"></div>
+            <canvas id="graphCanvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="btn-ok" class="btn btn-primary">OK（判定する）</button>
+            <button id="btn-next" class="btn btn-secondary">次の問題</button>
+        </div>
+    </div>
+
+    <div id="tab-organize" class="tab-content">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 10px;">
+            <h2 style="font-size:1.3rem; color:#4a4a4a; margin:0;">けがをした場所と種類（4月）</h2>
+            <span style="font-size:1.1rem; color:#4a4a4a; font-weight:bold;">(人)</span>
+        </div>
+        
+        <div class="cross-table-wrapper" style="position: relative; margin-bottom: 20px;">
+            <div id="org-result-msg" class="result-message" style="top: -20px; left: 75%;"></div>
+            <img id="org-hanamaru" src="https://raw.githubusercontent.com/byakusen/hanamaru/refs/heads/main/hanamaru2.png" alt="はなまる">
+            
+            <table class="cross-table">
+                <tr>
+                    <th class="diag" style="position:relative; width:20%; background: linear-gradient(to bottom right, #ffffcc 50%, #ffccff 50%);">
+                        <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;" preserveAspectRatio="none" viewBox="0 0 100 100">
+                            <line x1="0" y1="0" x2="100" y2="100" stroke="#00bfff" stroke-width="2.5"/>
+                        </svg>
+                        <div style="position:absolute; top:2px; right:5px; font-size:0.8rem; color:#333;">種類</div>
+                        <div style="position:absolute; bottom:2px; left:5px; font-size:0.8rem; color:#333;">場所</div>
+                    </th>
+                    <th id="th1-c-suri" class="bg-yellow" style="width:20%;">すりきず</th>
+                    <th id="th1-c-dabo" class="bg-yellow" style="width:20%;">打ぼく</th>
+                    <th id="th1-c-kiri" class="bg-yellow" style="width:20%;">切りきず</th>
+                    <th id="th1-c-sum" class="bg-yellow" style="width:20%;">合計</th>
+                </tr>
+                <tr>
+                    <th id="th1-r-koutei" class="bg-pink">校庭</th>
+                    <td id="cell-koutei-suri">6</td>
+                    <td id="cell-koutei-dabo">5</td>
+                    <td id="cell-koutei-kiri">1</td>
+                    <td id="td1-a" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋐</span>
+                        <input type="number" id="org-a" class="num-input">
+                    </td>
+                </tr>
+                <tr>
+                    <th id="th1-r-taiiku" class="bg-pink">体育館</th>
+                    <td id="cell-taiiku-suri">4</td>
+                    <td id="td1-i" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋑</span>
+                        <input type="number" id="org-i" class="num-input">
+                    </td>
+                    <td id="cell-taiiku-kiri">0</td>
+                    <td id="cell-taiiku-sum">6</td>
+                </tr>
+                <tr>
+                    <th id="th1-r-kyoushitsu" class="bg-pink">教室</th>
+                    <td id="cell-kyoushitsu-suri">1</td>
+                    <td id="cell-kyoushitsu-dabo">0</td>
+                    <td id="cell-kyoushitsu-kiri">4</td>
+                    <td id="cell-kyoushitsu-sum">5</td>
+                </tr>
+                <tr>
+                    <th id="th1-r-sum" class="bg-pink">合計</th>
+                    <td id="cell-sum-suri">11</td>
+                    <td id="cell-sum-dabo">7</td>
+                    <td id="cell-sum-kiri">5</td>
+                    <td id="td1-u" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋒</span>
+                        <input type="number" id="org-u" class="num-input">
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="controls">
+            <button id="btn-org-ok" class="btn btn-primary" disabled>OK（判定する）</button>
+            <button id="btn-org-reset" class="btn btn-secondary">ランダム</button>
+        </div>
+    </div>
+
+    <div id="tab-organize2" class="tab-content">
+        <div style="overflow-x: auto; margin-bottom: 20px;">
+            <h2 style="font-size:1.3rem; color:#4a4a4a; margin: 0 0 5px 0; text-align: center;">弟や妹がいる人調べ</h2>
+            <table style="width:100%; border-collapse:collapse; text-align:center; border:2.5px solid #ff3399; table-layout: fixed;">
+                <tr>
+                    <th style="background-color:#ff99cc; border:2.5px solid #ff3399; padding:5px; font-size:1rem; white-space:nowrap; width: 14%;">名前</th>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">だいき</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">なおや</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">みき</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">しんご</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">まき</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">あい</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">たく</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">ゆき</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">くみ</td>
+                    <td style="border:2.5px solid #ff3399; font-weight:bold; font-size:1rem;">さとし</td>
+                </tr>
+                <tr>
+                    <th style="background-color:#ffff99; border:2.5px solid #ff3399; padding:5px; font-size:1rem;">弟</th>
+                    <td id="org2-oto-0" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-oto-1" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-oto-2" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">✕</td>
+                    <td id="org2-oto-3" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-oto-4" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-oto-5" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-oto-6" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">✕</td>
+                    <td id="org2-oto-7" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-oto-8" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">✕</td>
+                    <td id="org2-oto-9" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                </tr>
+                <tr>
+                    <th style="background-color:#ffccff; border:2.5px solid #ff3399; padding:5px; font-size:1rem;">妹</th>
+                    <td id="org2-imo-0" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-imo-1" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">✕</td>
+                    <td id="org2-imo-2" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-imo-3" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-imo-4" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">✕</td>
+                    <td id="org2-imo-5" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-imo-6" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">✕</td>
+                    <td id="org2-imo-7" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-imo-8" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">◯</td>
+                    <td id="org2-imo-9" style="border:2.5px solid #ff3399; font-weight:bold; font-size:1.2rem;">✕</td>
+                </tr>
+            </table>
+            <div style="text-align: right; font-size: 1.1rem; font-weight: bold; margin-top: 5px;">◯…いる　✕…いない</div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 10px;">
+            <h2 style="font-size:1.3rem; color:#4a4a4a; margin:0;">弟や妹がいる人調べ</h2>
+            <span style="font-size:1.1rem; color:#4a4a4a; font-weight:bold;">(人)</span>
+        </div>
+        
+        <div class="cross-table-wrapper" style="position: relative; margin-bottom: 20px;">
+            <div id="org2-result-msg" class="result-message" style="top: -20px; left: 75%;"></div>
+            <img id="org2-hanamaru" src="https://raw.githubusercontent.com/byakusen/hanamaru/refs/heads/main/hanamaru2.png" alt="はなまる">
+            
+            <table class="cross-table" style="table-layout: fixed;">
+                <colgroup>
+                    <col style="width: 12%;">
+                    <col style="width: 16%;">
+                    <col style="width: 24%;">
+                    <col style="width: 24%;">
+                    <col style="width: 24%;">
+                </colgroup>
+                <tr>
+                    <th rowspan="2" colspan="2" style="position:relative; background: linear-gradient(to top right, #ffff99 50%, #ffcc99 50%); border: 2.5px solid #00bfff; padding:0;">
+                        <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;" preserveAspectRatio="none" viewBox="0 0 100 100">
+                            <line x1="0" y1="0" x2="100" y2="100" stroke="#00bfff" stroke-width="2.5"/>
+                        </svg>
+                        <div style="position:absolute; top:5px; right:15px; font-size:1.1rem; color:#333;">妹</div>
+                        <div style="position:absolute; bottom:5px; left:15px; font-size:1.1rem; color:#333;">弟</div>
+                    </th>
+                    <th colspan="2" style="background-color:#ffcc99;">妹</th>
+                    <th id="th2-imo-sum" rowspan="2" style="background-color:#ffcc99;">合計</th>
+                </tr>
+                <tr>
+                    <th id="th2-imo-iru" style="background-color:#ffcc99;">いる</th>
+                    <th id="th2-imo-inai" style="background-color:#ffcc99;">いない</th>
+                </tr>
+                <tr>
+                    <th rowspan="2" style="background-color:#ffff99;">弟</th>
+                    <th id="th2-oto-iru" style="background-color:#ffff99;">いる</th>
+                    <td id="org2-cell-imo_iru-oto_iru">4</td>
+                    <td id="td2-a" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋐</span>
+                        <input type="number" id="org2-a" class="num-input">
+                    </td>
+                    <td id="td2-i" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋑</span>
+                        <input type="number" id="org2-i" class="num-input">
+                    </td>
+                </tr>
+                <tr>
+                    <th id="th2-oto-inai" style="background-color:#ffff99;">いない</th>
+                    <td id="td2-u" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋒</span>
+                        <input type="number" id="org2-u" class="num-input">
+                    </td>
+                    <td id="td2-e" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋓</span>
+                        <input type="number" id="org2-e" class="num-input">
+                    </td>
+                    <td id="org2-cell-imo_sum-oto_inai">3</td>
+                </tr>
+                <tr>
+                    <th id="th2-oto-sum" colspan="2" style="background-color:#ffff99;">合計</th>
+                    <td id="org2-cell-imo_iru-oto_sum">6</td>
+                    <td id="td2-o" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋔</span>
+                        <input type="number" id="org2-o" class="num-input">
+                    </td>
+                    <td id="td2-ka" style="position:relative;">
+                        <span style="position:absolute; top:2px; left:2px; font-size:0.9rem;">㋕</span>
+                        <input type="number" id="org2-ka" class="num-input">
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="controls">
+            <button id="btn-org2-ok" class="btn btn-primary" disabled>OK（判定する）</button>
+            <button id="btn-org2-reset" class="btn btn-secondary">ランダム</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 連続正解カウンターのロジック ---
+    let streakCount = 0;
+    function updateStreak(isCorrect) {
+        if (isCorrect) {
+            streakCount++;
+        } else {
+            streakCount = 0;
+        }
+        document.getElementById('streak-counter').innerText = '連続正解: ' + streakCount;
+    }
+
+    // --- 定数・音声設定 ---
+    // 直リンク可能なMixkitのプレビュー音源を使用
+    const SOUND_CORRECT = new Audio('https://github.com/byakusen/gogelige.quiz/raw/refs/heads/main/quiz_seikai.mp3');
+    const SOUND_WRONG = new Audio('https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3');
+    
+    SOUND_CORRECT.volume = 0.6;
+    SOUND_WRONG.volume = 0.5;
+
+    // --- 画像のロード ---
+    const hanamaruImg = new Image();
+    hanamaruImg.src = 'https://raw.githubusercontent.com/byakusen/hanamaru/refs/heads/main/hanamaru2.png';
+
+    function playSound(audio) {
+        audio.currentTime = 0;
+        audio.play().catch(e => console.log('Audio play disabled by browser policy', e));
+    }
+
+    // --- アプリのステート ---
+    let targetData = [];    // 正解のデータ [116, 118, 121, 125, 128] など
+    let userPoints = {};    // ユーザーが打った点 { 0: 116, 1: 120, ... } (キーはX軸インデックス)
+    let gameState = 'playing'; // 'playing', 'judged'
+    let isAnimating = false;
+    let animProgress = 0;
+    let showResultFlag = false;
+
+    // --- Canvas設定 ---
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 論理サイズ（高解像度ディスプレイでも綺麗に描画するため）
+    const logicWidth = 600;
+    const logicHeight = 480;
+    const dpr = window.devicePixelRatio || 1;
+    
+    canvas.width = logicWidth * dpr;
+    canvas.height = logicHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    // グラフの描画マージン
+    const margin = { top: 40, right: 30, bottom: 60, left: 70 };
+    const graphW = logicWidth - margin.left - margin.right;
+    const graphH = logicHeight - margin.top - margin.bottom;
+
+    // Y軸の範囲 (115cm 〜 130cm) + 下部の余白
+    const yMax = 130;
+    const yMin = 115;
+    const yRange = yMax - yMin;
+    
+    // Y座標計算用 (0と115の間を115と120の間の縦幅の0.4倍、つまり2スケール分にする)
+    const yStep = graphH / (yRange + 2);
+    const yAxisBottom = margin.top + yRange * yStep;
+
+    // 座標取得ヘルパー関数 (左右に1列ずつ余白を持たせるため6等分)
+    const getX = (index) => margin.left + (index + 1) * (graphW / 6);
+    const getY = (value) => yAxisBottom - (value - yMin) * yStep;
+
+    // --- DOM要素 ---
+    const btnOk = document.getElementById('btn-ok');
+    const btnNext = document.getElementById('btn-next');
+    const resultMsg = document.getElementById('result-msg');
+
+    // --- 初期化ロジック ---
+    function initGame() {
+        gameState = 'playing';
+        userPoints = {};
+        isAnimating = false;
+        animProgress = 0;
+        showResultFlag = false;
+        btnOk.disabled = false;
+        
+        // メッセージ非表示
+        resultMsg.className = 'result-message';
+        resultMsg.innerText = '';
+
+        generateRandomData();
+        updateTableUI();
+        drawCanvas();
+    }
+
+    // 問題データの生成（5歳〜9歳で単調増加する身長データ）
+    function generateRandomData() {
+        targetData = [];
+        let currentHeight = 115 + Math.floor(Math.random() * 3); // 115, 116, 117のいずれか
+        targetData.push(currentHeight);
+        
+        for (let i = 1; i < 5; i++) {
+            // 前の年齢から 1〜4cm 成長する
+            let growth = 1 + Math.floor(Math.random() * 4);
+            currentHeight += growth;
+            if (currentHeight > 130) currentHeight = 130; // 上限
+            targetData.push(currentHeight);
+        }
+    }
+
+    // テーブルの表示更新
+    function updateTableUI() {
+        for (let i = 0; i < 5; i++) {
+            const td = document.getElementById(`val-${i}`);
+            td.style.opacity = '0'; // フェードエフェクト
+            setTimeout(() => {
+                td.innerText = targetData[i];
+                td.style.opacity = '1';
+            }, 150);
+        }
+    }
+
+    // --- 描画ロジック ---
+    function drawCanvas() {
+        ctx.clearRect(0, 0, logicWidth, logicHeight);
+
+        drawGridAndAxes();
+
+        // ユーザーの点と線を描画
+        drawUserGraph();
+
+        // 判定後の場合
+        if (gameState === 'judged') {
+            const isCorrect = checkAnswer();
+            if (!isCorrect) {
+                drawCorrectGraph(); // 不正解時は正しい線を赤で描画
+            } else {
+                if (showResultFlag) {
+                    drawHanamaru();     // 正解時は花丸
+                }
+            }
+        }
+    }
+
+    function drawGridAndAxes() {
+        ctx.strokeStyle = varColor('--grid-color', '#a0c4ff');
+        ctx.font = 'bold 16px "M PLUS Rounded 1c"';
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        // 水平線とY軸ラベル (115 〜 130)
+        for (let v = 115; v <= 130; v++) {
+            const y = getY(v);
+            ctx.beginPath();
+            ctx.lineWidth = (v % 5 === 0) ? 2.5 : 1;
+            ctx.moveTo(margin.left, y);
+            ctx.lineTo(logicWidth - margin.right, y);
+            ctx.stroke();
+
+            // 5刻みでラベル表示
+            if (v % 5 === 0) {
+                ctx.fillText(v, margin.left - 10, y);
+            }
+        }
+
+        // 垂直線とX軸ラベル (5才 〜 9才)
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.lineWidth = 1;
+        for (let i = -1; i <= 5; i++) {
+            const x = getX(i);
+            ctx.beginPath();
+            ctx.moveTo(x, margin.top);
+            ctx.lineTo(x, margin.top + graphH);
+            ctx.stroke();
+
+            if (i >= 0 && i <= 4) {
+                ctx.fillText((5 + i), x, margin.top + graphH + 10);
+            }
+        }
+
+        // 軸のタイトル
+        ctx.fillStyle = '#666';
+        ctx.font = '14px "M PLUS Rounded 1c"';
+        ctx.fillText('(才)', logicWidth - margin.right + 10, margin.top + graphH + 10);
+        ctx.textAlign = 'right';
+        ctx.fillText('(cm)', margin.left, margin.top - 25);
+
+        // 0の表示と波線 (省略記号)
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 16px "M PLUS Rounded 1c"';
+        const yZero = margin.top + graphH;
+        ctx.fillText('0', margin.left - 10, yZero);
+
+        // 波描画
+        drawSquigglyLine(margin.left, yAxisBottom + yStep * 0.7, logicWidth - margin.right);
+        drawSquigglyLine(margin.left, yAxisBottom + yStep * 1.3, logicWidth - margin.right);
+    }
+
+    function drawSquigglyLine(startX, y, endX) {
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let x = startX; x <= endX; x += 4) {
+            const offsetY = Math.sin((x - startX) * 0.4) * 3;
+            if (x === startX) ctx.moveTo(x, y + offsetY);
+            else ctx.lineTo(x, y + offsetY);
+        }
+        ctx.stroke();
+    }
+
+    function drawUserGraph() {
+        // 判定済みならユーザーの線を引く
+        if (gameState === 'judged') {
+            ctx.beginPath();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            
+            if (isAnimating) {
+                let currentSeg = Math.floor(animProgress);
+                let ratio = animProgress - currentSeg;
+
+                for (let i = 0; i <= 4; i++) {
+                    if (userPoints[i] === undefined) continue;
+
+                    const x = getX(i);
+                    const y = getY(userPoints[i]);
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else if (i <= currentSeg) {
+                        ctx.lineTo(x, y);
+                    } else if (i === currentSeg + 1) {
+                        const prevX = getX(i - 1);
+                        const prevY = getY(userPoints[i - 1]);
+                        const curX = prevX + (x - prevX) * ratio;
+                        const curY = prevY + (y - prevY) * ratio;
+                        ctx.lineTo(curX, curY);
+                    }
+                }
+            } else {
+                let first = true;
+                for (let i = 0; i < 5; i++) {
+                    if (userPoints[i] !== undefined) {
+                        const x = getX(i);
+                        const y = getY(userPoints[i]);
+                        if (first) {
+                            ctx.moveTo(x, y);
+                            first = false;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                }
+            }
+            ctx.stroke();
+        }
+
+        // ユーザーが打った点を描画
+        ctx.fillStyle = '#333';
+        for (let i = 0; i < 5; i++) {
+            if (userPoints[i] !== undefined) {
+                const x = getX(i);
+                const y = getY(userPoints[i]);
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    function drawCorrectGraph() {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 51, 51, 0.8)'; // 赤色
+        ctx.lineWidth = 4;
+        ctx.lineJoin = 'round';
+        
+        for (let i = 0; i < 5; i++) {
+            const x = getX(i);
+            const y = getY(targetData[i]);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // 正解の点
+        ctx.fillStyle = 'rgba(255, 51, 51, 0.8)';
+        for (let i = 0; i < 5; i++) {
+            const x = getX(i);
+            const y = getY(targetData[i]);
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawHanamaru() {
+        const cx = logicWidth / 2;
+        const cy = logicHeight / 2 + 20;
+        const imgSize = 250;
+        
+        if (hanamaruImg.complete) {
+            ctx.drawImage(hanamaruImg, cx - imgSize / 2, cy - imgSize / 2, imgSize, imgSize);
+        } else {
+            hanamaruImg.onload = () => {
+                ctx.drawImage(hanamaruImg, cx - imgSize / 2, cy - imgSize / 2, imgSize, imgSize);
+            };
+        }
+    }
+
+    // CSS変数取得ヘルパー
+    function varColor(name, fallback) {
+        const val = getComputedStyle(document.documentElement).getPropertyValue(name);
+        return val ? val.trim() : fallback;
+    }
+
+    // --- インタラクション (当たり判定) ---
+    function handlePointerDown(e) {
+        if (gameState !== 'playing') return;
+
+        // タッチイベントとマウスイベントの差異を吸収
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = logicWidth / rect.width;
+        const scaleY = logicHeight / rect.height;
+
+        const x = (clientX - rect.left) * scaleX;
+        const y = (clientY - rect.top) * scaleY;
+
+        // 一番近いXインデックス（年齢）を探す
+        let closestIndex = -1;
+        let minDiffX = Infinity;
+        for (let i = 0; i < 5; i++) {
+            const px = getX(i);
+            const diff = Math.abs(px - x);
+            if (diff < minDiffX) {
+                minDiffX = diff;
+                closestIndex = i;
+            }
+        }
+
+        // 当たり判定 (横方向): 甘め (セル幅の半分くらいまでOK)
+        if (minDiffX > (graphW / 4) * 0.6) return;
+
+        // 一番近いY値（身長）を探す
+        let closestVal = -1;
+        let minDiffY = Infinity;
+        for (let v = yMin; v <= yMax; v++) {
+            const py = getY(v);
+            const diff = Math.abs(py - y);
+            if (diff < minDiffY) {
+                minDiffY = diff;
+                closestVal = v;
+            }
+        }
+
+        // 当たり判定 (縦方向): 甘め (上下に十分余裕を持たせる)
+        // タップしやすいように広範囲を許可
+        if (minDiffY > 50) return;
+
+        // 点を記録して再描画
+        userPoints[closestIndex] = closestVal;
+        drawCanvas();
+    }
+
+    canvas.addEventListener('mousedown', handlePointerDown);
+    canvas.addEventListener('touchstart', (e) => {
+        // e.preventDefault(); // スクロール防止はbodyのoverflow:hiddenで行う
+        handlePointerDown(e);
+    }, { passive: true });
+
+    // --- 判定処理 ---
+    function checkAnswer() {
+        let isCorrect = true;
+        let pointCount = 0;
+
+        for (let i = 0; i < 5; i++) {
+            if (userPoints[i] !== undefined) {
+                pointCount++;
+                if (userPoints[i] !== targetData[i]) {
+                    isCorrect = false;
+                }
+            } else {
+                // 点が足りない
+                isCorrect = false;
+            }
+        }
+
+        if (pointCount < 5) isCorrect = false;
+        return isCorrect;
+    }
+
+    btnOk.addEventListener('click', () => {
+        if (gameState === 'judged') return;
+        
+        gameState = 'judged';
+        btnOk.disabled = true;
+
+        const isCorrect = checkAnswer();
+        updateStreak(isCorrect);
+        
+        if (isCorrect) {
+            isAnimating = true;
+            animProgress = 0;
+            animateCorrectLine();
+        } else {
+            drawCanvas(); // 判定結果を描画
+            playSound(SOUND_WRONG);
+            showResultText('ざんねん…', 'wrong-text');
+        }
+    });
+
+    function animateCorrectLine() {
+        animProgress += 0.02;
+        if (animProgress >= 4) {
+            animProgress = 4;
+            isAnimating = false;
+            drawCanvas();
+            
+            setTimeout(() => {
+                showResultFlag = true;
+                drawCanvas();
+                
+                playSound(SOUND_CORRECT);
+                showResultText('大正解！', 'correct-text');
+                // 紙吹雪エフェクト
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#ff7e67', '#4facfe', '#ffd700', '#ffb3c6']
+                });
+            }, 1000);
+            
+            return;
+        }
+        drawCanvas();
+        requestAnimationFrame(animateCorrectLine);
+    }
+
+    function showResultText(text, className) {
+        resultMsg.innerText = text;
+        resultMsg.className = `result-message ${className} show`;
+    }
+
+    btnNext.addEventListener('click', () => {
+        initGame();
+    });
+
+    // --- タブ切り替え ---
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        if (tabId === 'graph') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('tab-graph').classList.add('active');
+        } else if (tabId === 'organize') {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('tab-organize').classList.add('active');
+        } else if (tabId === 'organize2') {
+            document.querySelectorAll('.tab-btn')[2].classList.add('active');
+            document.getElementById('tab-organize2').classList.add('active');
+        }
+    }
+
+    // --- 整理の仕方① 用のロジック ---
+    const orgInputA = document.getElementById('org-a');
+    const orgInputI = document.getElementById('org-i');
+    const orgInputU = document.getElementById('org-u');
+    const orgInputs = [orgInputA, orgInputI, orgInputU];
+    const btnOrgOk = document.getElementById('btn-org-ok');
+    const btnOrgReset = document.getElementById('btn-org-reset');
+    const orgHanamaru = document.getElementById('org-hanamaru');
+    const orgResultMsg = document.getElementById('org-result-msg');
+
+    let currentOrgAnswers = { a: 12, i: 2, u: 23 };
+
+    function generateOrgData() {
+        const koutei = [Math.floor(Math.random() * 8), Math.floor(Math.random() * 8), Math.floor(Math.random() * 4)];
+        const taiiku = [Math.floor(Math.random() * 6), Math.floor(Math.random() * 6), Math.floor(Math.random() * 3)];
+        const kyoushitsu = [Math.floor(Math.random() * 4), Math.floor(Math.random() * 3), Math.floor(Math.random() * 6)];
+        
+        const koutei_sum = koutei[0] + koutei[1] + koutei[2];
+        const taiiku_sum = taiiku[0] + taiiku[1] + taiiku[2];
+        const kyoushitsu_sum = kyoushitsu[0] + kyoushitsu[1] + kyoushitsu[2];
+        
+        const sum_suri = koutei[0] + taiiku[0] + kyoushitsu[0];
+        const sum_dabo = koutei[1] + taiiku[1] + kyoushitsu[1];
+        const sum_kiri = koutei[2] + taiiku[2] + kyoushitsu[2];
+        
+        const total_sum = sum_suri + sum_dabo + sum_kiri;
+
+        currentOrgAnswers.a = koutei_sum;
+        currentOrgAnswers.i = taiiku[1];
+        currentOrgAnswers.u = total_sum;
+
+        document.getElementById('cell-koutei-suri').innerText = koutei[0];
+        document.getElementById('cell-koutei-dabo').innerText = koutei[1];
+        document.getElementById('cell-koutei-kiri').innerText = koutei[2];
+
+        document.getElementById('cell-taiiku-suri').innerText = taiiku[0];
+        document.getElementById('cell-taiiku-kiri').innerText = taiiku[2];
+        document.getElementById('cell-taiiku-sum').innerText = taiiku_sum;
+
+        document.getElementById('cell-kyoushitsu-suri').innerText = kyoushitsu[0];
+        document.getElementById('cell-kyoushitsu-dabo').innerText = kyoushitsu[1];
+        document.getElementById('cell-kyoushitsu-kiri').innerText = kyoushitsu[2];
+        document.getElementById('cell-kyoushitsu-sum').innerText = kyoushitsu_sum;
+
+        document.getElementById('cell-sum-suri').innerText = sum_suri;
+        document.getElementById('cell-sum-dabo').innerText = sum_dabo;
+        document.getElementById('cell-sum-kiri').innerText = sum_kiri;
+    }
+
+    function checkOrgInputs() {
+        // すべて入力されていたらOKボタンを有効化
+        const allFilled = orgInputs.every(input => input.value !== '');
+        btnOrgOk.disabled = !allFilled;
+    }
+
+    orgInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            input.classList.remove('input-error');
+            checkOrgInputs();
+        });
+    });
+
+    btnOrgOk.addEventListener('click', () => {
+        const valA = parseInt(orgInputA.value, 10);
+        const valI = parseInt(orgInputI.value, 10);
+        const valU = parseInt(orgInputU.value, 10);
+
+        // 正解の判定
+        const isA = (valA === currentOrgAnswers.a);
+        const isI = (valI === currentOrgAnswers.i);
+        const isU = (valU === currentOrgAnswers.u);
+
+        orgInputA.classList.toggle('input-error', !isA);
+        orgInputI.classList.toggle('input-error', !isI);
+        orgInputU.classList.toggle('input-error', !isU);
+
+        const isCorrect = (isA && isI && isU);
+        updateStreak(isCorrect);
+
+        if (isCorrect) {
+            playSound(SOUND_CORRECT);
+            orgResultMsg.innerText = '大正解！';
+            orgResultMsg.className = 'result-message correct-text show';
+            orgHanamaru.classList.add('show');
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#ff7e67', '#4facfe', '#ffd700', '#ffb3c6']
+            });
+            btnOrgOk.disabled = true;
+            orgInputs.forEach(i => i.disabled = true);
+        } else {
+            playSound(SOUND_WRONG);
+            orgResultMsg.innerText = 'ざんねん…';
+            orgResultMsg.className = 'result-message wrong-text show';
+            
+            setTimeout(() => {
+                orgResultMsg.classList.remove('show');
+            }, 2000);
+        }
+    });
+
+    btnOrgReset.addEventListener('click', () => {
+        orgInputs.forEach(input => {
+            input.value = '';
+            input.disabled = false;
+            input.classList.remove('input-error');
+        });
+        orgResultMsg.className = 'result-message';
+        orgResultMsg.innerText = '';
+        orgHanamaru.classList.remove('show');
+        generateOrgData();
+        checkOrgInputs();
+    });
+
+    // --- 整理の仕方② 用のロジック ---
+    const org2InputA = document.getElementById('org2-a');
+    const org2InputI = document.getElementById('org2-i');
+    const org2InputU = document.getElementById('org2-u');
+    const org2InputE = document.getElementById('org2-e');
+    const org2InputO = document.getElementById('org2-o');
+    const org2InputKa = document.getElementById('org2-ka');
+    const org2Inputs = [org2InputA, org2InputI, org2InputU, org2InputE, org2InputO, org2InputKa];
+    const btnOrg2Ok = document.getElementById('btn-org2-ok');
+    const btnOrg2Reset = document.getElementById('btn-org2-reset');
+    const org2Hanamaru = document.getElementById('org2-hanamaru');
+    const org2ResultMsg = document.getElementById('org2-result-msg');
+
+    let currentOrg2Answers = { a: 3, i: 7, u: 2, e: 1, o: 4, ka: 10 };
+
+    function generateOrg2Data() {
+        let imo_iru_oto_iru = 0;
+        let imo_inai_oto_iru = 0;
+        let imo_iru_oto_inai = 0;
+        let imo_inai_oto_inai = 0;
+
+        for (let idx = 0; idx < 10; idx++) {
+            const hasOto = Math.random() < 0.5;
+            const hasImo = Math.random() < 0.5;
+
+            document.getElementById(`org2-oto-${idx}`).innerText = hasOto ? '◯' : '✕';
+            document.getElementById(`org2-imo-${idx}`).innerText = hasImo ? '◯' : '✕';
+
+            if (hasOto && hasImo) imo_iru_oto_iru++;
+            else if (hasOto && !hasImo) imo_inai_oto_iru++;
+            else if (!hasOto && hasImo) imo_iru_oto_inai++;
+            else imo_inai_oto_inai++;
+        }
+
+        const imo_sum_oto_iru = imo_iru_oto_iru + imo_inai_oto_iru;
+        const imo_sum_oto_inai = imo_iru_oto_inai + imo_inai_oto_inai;
+        const imo_iru_oto_sum = imo_iru_oto_iru + imo_iru_oto_inai;
+        const imo_inai_oto_sum = imo_inai_oto_iru + imo_inai_oto_inai;
+        const total_sum = imo_sum_oto_iru + imo_sum_oto_inai;
+
+        currentOrg2Answers.a = imo_inai_oto_iru;
+        currentOrg2Answers.i = imo_sum_oto_iru;
+        currentOrg2Answers.u = imo_iru_oto_inai;
+        currentOrg2Answers.e = imo_inai_oto_inai;
+        currentOrg2Answers.o = imo_inai_oto_sum;
+        currentOrg2Answers.ka = total_sum;
+
+        document.getElementById('org2-cell-imo_iru-oto_iru').innerText = imo_iru_oto_iru;
+        document.getElementById('org2-cell-imo_sum-oto_inai').innerText = imo_sum_oto_inai;
+        document.getElementById('org2-cell-imo_iru-oto_sum').innerText = imo_iru_oto_sum;
+    }
+
+    function checkOrg2Inputs() {
+        const allFilled = org2Inputs.every(input => input.value !== '');
+        btnOrg2Ok.disabled = !allFilled;
+    }
+
+    org2Inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            input.classList.remove('input-error');
+            checkOrg2Inputs();
+        });
+    });
+
+    btnOrg2Ok.addEventListener('click', () => {
+        const valA = parseInt(org2InputA.value, 10);
+        const valI = parseInt(org2InputI.value, 10);
+        const valU = parseInt(org2InputU.value, 10);
+        const valE = parseInt(org2InputE.value, 10);
+        const valO = parseInt(org2InputO.value, 10);
+        const valKa = parseInt(org2InputKa.value, 10);
+
+        // 正解の判定
+        const isA = (valA === currentOrg2Answers.a);
+        const isI = (valI === currentOrg2Answers.i);
+        const isU = (valU === currentOrg2Answers.u);
+        const isE = (valE === currentOrg2Answers.e);
+        const isO = (valO === currentOrg2Answers.o);
+        const isKa = (valKa === currentOrg2Answers.ka);
+
+        org2InputA.classList.toggle('input-error', !isA);
+        org2InputI.classList.toggle('input-error', !isI);
+        org2InputU.classList.toggle('input-error', !isU);
+        org2InputE.classList.toggle('input-error', !isE);
+        org2InputO.classList.toggle('input-error', !isO);
+        org2InputKa.classList.toggle('input-error', !isKa);
+
+        const isCorrect = (isA && isI && isU && isE && isO && isKa);
+        updateStreak(isCorrect);
+
+        if (isCorrect) {
+            playSound(SOUND_CORRECT);
+            org2ResultMsg.innerText = '大正解！';
+            org2ResultMsg.className = 'result-message correct-text show';
+            org2Hanamaru.classList.add('show');
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#ff7e67', '#4facfe', '#ffd700', '#ffb3c6']
+            });
+            btnOrg2Ok.disabled = true;
+            org2Inputs.forEach(i => i.disabled = true);
+        } else {
+            playSound(SOUND_WRONG);
+            org2ResultMsg.innerText = 'ざんねん…';
+            org2ResultMsg.className = 'result-message wrong-text show';
+            
+            setTimeout(() => {
+                org2ResultMsg.classList.remove('show');
+            }, 2000);
+        }
+    });
+
+    btnOrg2Reset.addEventListener('click', () => {
+        org2Inputs.forEach(input => {
+            input.value = '';
+            input.disabled = false;
+            input.classList.remove('input-error');
+        });
+        org2ResultMsg.className = 'result-message';
+        org2ResultMsg.innerText = '';
+        org2Hanamaru.classList.remove('show');
+        generateOrg2Data();
+        checkOrg2Inputs();
+    });
+
+    // --- 視線誘導（ハイライト）機能 ---
+    function setHighlightGroup(input, ids) {
+        input.addEventListener('focus', () => {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('highlight');
+            });
+        });
+        input.addEventListener('blur', () => {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('highlight');
+            });
+        });
+    }
+
+    // Organize 1 用のハイライト設定
+    const h1_r_koutei = ['th1-r-koutei', 'cell-koutei-suri', 'cell-koutei-dabo', 'cell-koutei-kiri', 'td1-a'];
+    const h1_r_taiiku = ['th1-r-taiiku', 'cell-taiiku-suri', 'td1-i', 'cell-taiiku-kiri', 'cell-taiiku-sum'];
+    const h1_r_sum = ['th1-r-sum', 'cell-sum-suri', 'cell-sum-dabo', 'cell-sum-kiri', 'td1-u'];
+    const h1_c_dabo = ['th1-c-dabo', 'cell-koutei-dabo', 'td1-i', 'cell-kyoushitsu-dabo', 'cell-sum-dabo'];
+    const h1_c_sum = ['th1-c-sum', 'td1-a', 'cell-taiiku-sum', 'cell-kyoushitsu-sum', 'td1-u'];
+
+    setHighlightGroup(orgInputA, [...h1_r_koutei, ...h1_c_sum]);
+    setHighlightGroup(orgInputI, [...h1_r_taiiku, ...h1_c_dabo]);
+    setHighlightGroup(orgInputU, [...h1_r_sum, ...h1_c_sum]);
+
+    // Organize 2 用のハイライト設定
+    const h2_imo_iru = ['th2-imo-iru', 'org2-cell-imo_iru-oto_iru', 'td2-u', 'org2-cell-imo_iru-oto_sum'];
+    const h2_imo_inai = ['th2-imo-inai', 'td2-a', 'td2-e', 'td2-o'];
+    const h2_imo_sum = ['th2-imo-sum', 'td2-i', 'org2-cell-imo_sum-oto_inai', 'td2-ka'];
+
+    const h2_oto_iru = ['th2-oto-iru', 'org2-cell-imo_iru-oto_iru', 'td2-a', 'td2-i'];
+    const h2_oto_inai = ['th2-oto-inai', 'td2-u', 'td2-e', 'org2-cell-imo_sum-oto_inai'];
+    const h2_oto_sum = ['th2-oto-sum', 'org2-cell-imo_iru-oto_sum', 'td2-o', 'td2-ka'];
+
+    setHighlightGroup(org2InputA, [...h2_oto_iru, ...h2_imo_inai]);
+    setHighlightGroup(org2InputI, [...h2_oto_iru, ...h2_imo_sum]);
+    setHighlightGroup(org2InputU, [...h2_oto_inai, ...h2_imo_iru]);
+    setHighlightGroup(org2InputE, [...h2_oto_inai, ...h2_imo_inai]);
+    setHighlightGroup(org2InputO, [...h2_oto_sum, ...h2_imo_inai]);
+    setHighlightGroup(org2InputKa, [...h2_oto_sum, ...h2_imo_sum]);
+
+    // 起動時の初期化
+    window.onload = initGame;
+
+</script>
+</body>
+</html>
