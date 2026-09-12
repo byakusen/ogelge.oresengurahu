@@ -134,7 +134,7 @@
         .btn:disabled { background: #cccccc; cursor: not-allowed; transform: none; box-shadow: none; }
         .tabs { display: flex; width: 100%; margin-bottom: 4px; border-bottom: 2px solid var(--grid-color); }
         .tab-btn {
-            flex: 1; padding: 5px 2px; font-size: 0.74rem; font-family: inherit;
+            flex: 1; padding: 7px 3px; font-size: 1rem; font-family: inherit;
             font-weight: bold; background: none; border: none; cursor: pointer;
             color: #666; transition: all 0.2s ease; border-radius: 10px 10px 0 0;
         }
@@ -261,6 +261,33 @@
         .org-opts { display:flex; flex-wrap:wrap; gap:7px; margin-top:5px; }
         .side-block .org-opts .title-opt { width:auto; padding:9px 14px; font-size:0.95rem; }
         .title-opt:disabled { cursor:default; }
+        /* 読み取り：長い説明文を たてにならべて えらぶ（「正しく説明しているのはだれですか」） */
+        .say-opts { flex-direction:column; align-items:stretch; width:100%; }
+        .side-block .say-opts .title-opt {
+            width:100%; text-align:left; padding:8px 11px;
+            font-size:0.9rem; line-height:1.5; white-space:normal;
+        }
+        .say-name { display:block; font-size:0.78rem; color:#d81b60; margin-bottom:2px; }
+        /* 読み取り：グラフの種類をえらぶ タブ */
+        .read-tabs {
+            display:flex; gap:4px; width:100%;
+            margin:-2px 0 10px; border-bottom:2px solid var(--grid-color);
+        }
+        .read-tab {
+            flex:1 1 0; min-width:0; padding:8px 2px;
+            font-size:0.86rem; font-family:inherit; font-weight:bold;
+            background:none; border:none; cursor:pointer; color:#666;
+            border-radius:9px 9px 0 0; white-space:nowrap;
+            overflow:hidden; text-overflow:ellipsis; transition:all 0.2s ease;
+        }
+        .read-tab.active {
+            color:var(--primary-color); background:rgba(255,255,255,0.65);
+            border-bottom:3px solid var(--primary-color);
+        }
+        @media (max-width: 480px) { .read-tab { font-size:0.78rem; padding:7px 0; } }
+        /* 読み取り：問題文の下に 3択ボタンを ならべる行 */
+        .rq-block { flex-direction:column; align-items:flex-start; }
+        .rq-block .rq-head { display:flex; align-items:flex-start; gap:4px; width:100%; }
         /* 表と OK・ランダムボタンのあいだ */
         #tab-organize .cross-table-wrapper,
         #tab-organize2 .cross-table-wrapper { margin-bottom: 22px !important; }
@@ -279,7 +306,7 @@
             .btn { font-size: 0.9rem; padding: 9px 0; }
             .app-container { padding: 8px; }
             #streak-counter { font-size: 0.8rem; top:6px; right:6px; }
-            .tab-btn { font-size: 0.7rem; padding: 4px 1px; }
+            .tab-btn { font-size: 0.8rem; padding: 6px 1px; }
             .cross-table th, .cross-table td { font-size: 0.9rem; padding:4px 1px; }
             .rq { font-size: 0.78rem; }
             #numpad { max-width:280px; }
@@ -464,7 +491,10 @@
             <img id="org2-hanamaru" alt="はなまる">
             <table class="cross-table" style="table-layout:fixed;">
                 <colgroup>
-                    <col style="width:12%;"><col style="width:12%;"><col style="width:16%;">
+                    <!-- この表は 5列。前は 6列ぶん 書いてあって、右はしに
+                         からの列が できていた（それを 消した）。
+                         妹の「いる」「いない」「合計」は 同じはば にそろえている -->
+                    <col style="width:10%;"><col style="width:18%;">
                     <col style="width:24%;"><col style="width:24%;"><col style="width:24%;">
                 </colgroup>
                 <tr>
@@ -538,12 +568,28 @@
     </div>
 
     <div id="side-read" class="side-block" style="display:none;">
+        <div class="read-tabs" id="read-tabs">
+            <button type="button" class="read-tab active" data-t="1">折れ線グラフ</button>
+            <button type="button" class="read-tab" data-t="2">折れ線グラフ2つ</button>
+            <button type="button" class="read-tab" data-t="3">折れ線とぼうグラフ</button>
+        </div>
         <div class="side-step">もんだい <span id="read-step-num">1</span> / <span id="read-step-total">3</span></div>
         <!-- Type1: 1日の気温 -->
         <div id="read-type1" class="read-questions">
-            <div class="rq"><span class="rq-num">①</span><span class="rq-text" id="rq1-text">午前10時の気温は何度ですか。</span><span class="rq-answer">（<input type="number" id="rq1" class="num-input">度）</span></div>
-            <div class="rq"><span class="rq-num">②</span><span class="rq-text">いちばん気温が高い時こくと気温は？</span><span class="rq-answer">（<select id="rq2-time"></select>・<input type="number" id="rq2-temp" class="num-input">度）</span></div>
-            <div class="rq"><span class="rq-num">③</span><span class="rq-text">気温の上がり方がいちばん大きいのはどこですか。<span class="side-hint">グラフの線をタップしてえらぼう。</span></span><span class="rq-answer"><input type="text" id="rq3-span" class="pick-input" readonly placeholder="線をタップ"></span></div>
+            <div class="rq rq-block">
+                <span class="rq-head"><span class="rq-num">①</span><span class="rq-text">横のじくは、何を表していますか。</span></span>
+                <span class="org-opts" id="rt1-x-opts"></span>
+                <input type="hidden" id="rt1-xaxis">
+            </div>
+            <div class="rq rq-block">
+                <span class="rq-head"><span class="rq-num">②</span><span class="rq-text">たてのじくは、何を表していますか。</span></span>
+                <span class="org-opts" id="rt1-y-opts"></span>
+                <input type="hidden" id="rt1-yaxis">
+            </div>
+            <div class="rq"><span class="rq-num">③</span><span class="rq-text">たてのじくの1めもりは、何度を表していますか。</span><span class="rq-answer">（<input type="number" id="rt1-step" class="num-input">度）</span></div>
+            <div class="rq"><span class="rq-num">④</span><span class="rq-text" id="rq1-text">午前10時の気温は何度ですか。</span><span class="rq-answer">（<input type="number" id="rq1" class="num-input">度）</span></div>
+            <div class="rq"><span class="rq-num">⑤</span><span class="rq-text">いちばん気温が高い時こくと気温は？</span><span class="rq-answer">（<select id="rq2-time"></select>・<input type="number" id="rq2-temp" class="num-input">度）</span></div>
+            <div class="rq"><span class="rq-num">⑥</span><span class="rq-text">気温の上がり方がいちばん大きいのはどこですか。<span class="side-hint">グラフの線をタップしてえらぼう。</span></span><span class="rq-answer"><input type="text" id="rq3-span" class="pick-input" readonly placeholder="線をタップ"></span></div>
         </div>
         <!-- Type2: 2都市の年間気温比較 -->
         <div id="read-type2" class="read-questions" style="display:none;">
@@ -554,6 +600,11 @@
         <div id="read-type3" class="read-questions" style="display:none;">
             <div class="rq"><span class="rq-num">①</span><span class="rq-text">こう水量がいちばん多い月と量は？</span><span class="rq-answer">（<input type="number" id="rt3-month1" class="num-input">月・<input type="number" id="rt3-amount" class="num-input">mm）</span></div>
             <div class="rq"><span class="rq-num">②</span><span class="rq-text">気温がいちばん高い月と気温は？</span><span class="rq-answer">（<input type="number" id="rt3-month2" class="num-input">月・<input type="number" id="rt3-temp" class="num-input">度）</span></div>
+            <div class="rq rq-block">
+                <span class="rq-head"><span class="rq-num">③</span><span class="rq-text">上のグラフについて、正しく 説明している文は どれですか。</span></span>
+                <span class="org-opts say-opts" id="rt3-who-opts"></span>
+                <input type="hidden" id="rt3-who">
+            </div>
         </div>
         <div id="read-result-msg"></div>
     </div>
@@ -589,12 +640,31 @@
                     </span>
                 </span>
             </div>
+            <div class="rq">
+                <span class="rq-num">④</span>
+                <span class="rq-text" id="org-word-text"></span>
+                <span class="rq-answer">（<input type="number" id="org-word" class="num-input">人）</span>
+            </div>
         </div>
     </div>
 
     <div id="side-organize2" class="side-block" style="display:none;">
         <div class="side-step">もんだい <span id="org2-step-num">1</span> / <span id="org2-step-total">6</span></div>
         <div id="org2-q-text" class="side-q"></div>
+        <div class="read-questions" style="margin-bottom:0;">
+            <div class="rq" id="org2-wrow-0" style="display:none;">
+                <span class="rq-text" id="org2-wtext-0"></span>
+                <span class="rq-answer">（<input type="number" id="org2-word1" class="num-input">人）</span>
+            </div>
+            <div class="rq" id="org2-wrow-1" style="display:none;">
+                <span class="rq-text" id="org2-wtext-1"></span>
+                <span class="rq-answer">（<input type="number" id="org2-word2" class="num-input">人）</span>
+            </div>
+            <div class="rq" id="org2-wrow-2" style="display:none;">
+                <span class="rq-text" id="org2-wtext-2"></span>
+                <span class="rq-answer">（<input type="number" id="org2-word3" class="num-input">人）</span>
+            </div>
+        </div>
     </div>
 
     <!-- テンキー -->
@@ -993,7 +1063,8 @@
                 + '<span class="side-hint">5つうったら「OK」をおそう。</span>';
             opts.style.display = 'none';
         }
-        updateOkButton(); hideHint();
+        updateOkButton(); hideHint(); updateNumpadVisibility();
+        Challenge10.newProblem();     // この小問の ミス数を 0にする
     }
 
     // 表題選択肢を生成
@@ -1020,6 +1091,7 @@
                 if (title === correct) {
                     btn.classList.add('correct');
                     playSound(SOUND_CORRECT);
+                    chalCount(false);         // もんだい2 ぶんを 数える
                     setTimeout(() => { graphStep = 3; updateGraphSidePanel(); }, 700);
                 } else {
                     btn.classList.add('input-error');
@@ -1073,6 +1145,7 @@
         const loOk = parseInt(yBoxVals.lo, 10) === hiddenYLabels[0];
         if (hiOk && loOk) {
             playSound(SOUND_CORRECT);
+            chalCount(false);                 // もんだい1 ぶんを 数える
             activeYBox = null; drawCanvas();
             setTimeout(() => { graphStep = 2; updateGraphSidePanel(); drawCanvas(); }, 800);
         } else {
@@ -1327,7 +1400,7 @@
             setTimeout(() => {
                 showResultFlag = true; drawCanvas(); playSound(SOUND_CORRECT);
                 showResultText('大正解！', 'correct-text');
-                Challenge10.done();
+                chalCount(true);
                 hanamaruAutoHide(() => { showResultFlag = false; drawCanvas(); });
             }, 800);
             return;
@@ -1357,17 +1430,44 @@
         });
         Challenge10.reset();
         hideHint();
-        if (tabId === 'read') showReadQuestion();
+        // 読み取りタブに入りなおしたら、種類は じゅんばんに もどす
+        if (tabId === 'read') { readTypeLock = null; showReadQuestion(); }
         else if (tabId === 'organize') showOrgQuestion();
         else if (tabId === 'organize2') showOrg2Question();
+        updateNumpadVisibility();
     }
 
-    // チャレンジ中に「次の問題」を出す（今ひらいているタブに合わせる）
-    function nextProblemForCurrentTab() {
+    // ========================================
+    //  10問チャレンジ の 数えかた
+    // ========================================
+    // 1問＝「小問ひとつ」。セット全部ではない。
+    // たとえば 読み取りの折れ線グラフは ①〜⑥で 6問ぶん 数える。
+    //
+    // セットの とちゅうの小問に正解したときは、その場で 次の小問へ 進むので
+    // 新しい問題は 作らない。セットの さいごの小問に正解したときだけ、
+    // はなまるを 見せてから 新しい問題を 作る。
+    let chalPhase = 'idle';          // 'mid'＝セットの途中 / 'end'＝セットの最後 / 'idle'
+    const CHAL_SET_WAIT = 1500;      // セットが終わってから 次の問題までの待ち（はなまる用）
+
+    // 小問ひとつに正解したときに呼ぶ。last＝それが セットの さいごの小問か
+    function chalCount(last) {
+        chalPhase = last ? 'end' : 'mid';
+        Challenge10.done();
+    }
+
+    function newProblemNow() {
         if (currentTab === 'graph') initGame();
         else if (currentTab === 'read') generateReadData();
         else if (currentTab === 'organize') resetOrgProblem();
         else resetOrg2Problem();
+    }
+
+    // Challenge10 から「次へ」と言われたときの動き
+    function nextProblemForCurrentTab() {
+        const p = chalPhase;
+        chalPhase = 'idle';
+        if (p === 'mid') return;                 // セットの途中 → 各タブが自分で進める
+        setTimeout(newProblemNow, p === 'end' ? CHAL_SET_WAIT : 0);
     }
 
     // ========================================
@@ -1376,7 +1476,39 @@
     const orgInputA = document.getElementById('org-a');
     const orgInputI = document.getElementById('org-i');
     const orgInputU = document.getElementById('org-u');
-    const orgInputs = [orgInputA, orgInputI, orgInputU];
+    const orgInputWord = document.getElementById('org-word');
+    const orgInputs = [orgInputA, orgInputI, orgInputU, orgInputWord];
+
+    // ===== 整理①：表を使って答える ことばの問題 =====
+    // 長いと感じるときは この数を 0 にすると ことばの問題が出なくなる（もとの5問にもどる）
+    const ORG_WORD_COUNT = 1;
+    // calc には 表を作ったときの数がわたってくる
+    //   k/t/ky … 校庭・体育館・教室の 3つずつ　ks/ts/kys … その行の合計
+    //   ss/sd/sk … すりきず・打ぼく・切りきずの たての合計
+    // ひき算は マイナスにならないよう「ちがい」でたずねている
+    const ORG_WORDS = [
+        { q:'校庭でけがをした人と、教室でけがをした人の ちがいは 何人ですか。',
+          calc: d => Math.abs(d.ks - d.kys),
+          hint:'囲んだ 2つの 合計を くらべて、大きいほうから 小さいほうを ひこう。',
+          els:['#td1-a','#cell-kyoushitsu-sum'] },
+        { q:'体育館と教室で けがをした人は、あわせて 何人ですか。',
+          calc: d => d.ts + d.kys,
+          hint:'囲んだ 2つの 合計を たそう。',
+          els:['#cell-taiiku-sum','#cell-kyoushitsu-sum'] },
+        { q:'すりきずをした人と、切りきずをした人の ちがいは 何人ですか。',
+          calc: d => Math.abs(d.ss - d.sk),
+          hint:'いちばん下の 合計の 行を くらべよう。',
+          els:['#th1-r-sum','#cell-sum-suri','#cell-sum-kiri'] },
+        { q:'打ぼくと 切りきずを した人は、あわせて 何人ですか。',
+          calc: d => d.sd + d.sk,
+          hint:'いちばん下の 合計の 行から、2つを たそう。',
+          els:['#th1-r-sum','#cell-sum-dabo','#cell-sum-kiri'] },
+        { q:'校庭で けがをした人のうち、すりきず いがいの けがをした人は 何人ですか。',
+          calc: d => d.k[1] + d.k[2],
+          hint:'校庭の 行から、すりきず いがいの 2つを たそう。',
+          els:['#th1-r-koutei','#cell-koutei-dabo','#cell-koutei-kiri'] }
+    ];
+    let orgWord = ORG_WORDS[0];
     const orgSelects = [];   // プルダウンは すべて 3択ボタンに置きかえた
     // ②③は 3択ボタン。えらび終わった時点で 判定する
     const orgOptGroupIds = ['org-q2-opts', 'org-q3-place-opts', 'org-q3-type-opts'];
@@ -1431,11 +1563,17 @@
             }
         }
 
+        // ④ 表を使って答える ことばの問題（毎回 1つ えらぶ）
+        orgWord = ORG_WORDS[Math.floor(Math.random()*ORG_WORDS.length)];
+        const wordVal = orgWord.calc({ k, t, ky, ks, ts, kys, ss, sd, sk });
+        document.getElementById('org-word-text').textContent = orgWord.q;
+
         currentOrgAnswers = {
             a: ks, i: t[1], u: ss+sd+sk,
             q2placeIdx: q2placeIdx,
             q2type: typeNames[q2maxIdx],
-            q3place: placeNames[q3pi], q3type: typeNames[q3ti]
+            q3place: placeNames[q3pi], q3type: typeNames[q3ti],
+            word: wordVal
         };
         document.getElementById('cell-koutei-suri').innerText = k[0];
         document.getElementById('cell-koutei-dabo').innerText = k[1];
@@ -1458,8 +1596,9 @@
         { ids:['org-i'],        keys:['i'],      text:'ひょうの ㋑に あてはまる数を 書きましょう。' },
         { ids:['org-u'],        keys:['u'],      text:'ひょうの ㋒に あてはまる数を 書きましょう。' },
         { ids:[], keys:['q2type'], rq:0, opts:['org-q2-opts'] },
-        { ids:[], keys:['q3place','q3type'], rq:1, opts:['org-q3-place-opts','org-q3-type-opts'] }
-    ];
+        { ids:[], keys:['q3place','q3type'], rq:1, opts:['org-q3-place-opts','org-q3-type-opts'] },
+        { ids:['org-word'], keys:['word'], rq:2, word:true }
+    ].slice(0, 5 + ORG_WORD_COUNT);
     let orgStep = 0;
 
     function orgStepEls() { return orgSteps[orgStep].ids.map(id => document.getElementById(id)); }
@@ -1478,7 +1617,8 @@
             if (!el.classList.contains('done-input')) el.disabled = true;
         });
         orgStepEls().forEach(el => { el.disabled = false; });
-        checkOrgInputs(); hideHint();
+        checkOrgInputs(); hideHint(); updateNumpadVisibility();
+        Challenge10.newProblem();     // この小問の ミス数を 0にする
         const first = orgStepEls().find(el => el.classList.contains('num-input'));
         if (first) first.focus();
     }
@@ -1509,6 +1649,7 @@
         }
         playSound(SOUND_CORRECT);
         if (orgStep < orgSteps.length - 1) {
+            chalCount(false);
             orgResultMsg.innerText = '⭕';
             orgResultMsg.className = 'result-message correct-text show';
             setTimeout(() => {
@@ -1522,7 +1663,7 @@
             orgHanamaru.classList.add('show');
             hanamaruAutoHide(() => orgHanamaru.classList.remove('show'));
             updateStreak(true);
-            Challenge10.done();
+            chalCount(true);
         }
     }
 
@@ -1594,7 +1735,45 @@
     const org2InputE = document.getElementById('org2-e');
     const org2InputO = document.getElementById('org2-o');
     const org2InputKa = document.getElementById('org2-ka');
-    const org2Inputs = [org2InputA, org2InputI, org2InputU, org2InputE, org2InputO, org2InputKa];
+    const org2InputW1 = document.getElementById('org2-word1');
+    const org2InputW2 = document.getElementById('org2-word2');
+    const org2InputW3 = document.getElementById('org2-word3');
+    const org2Inputs = [org2InputA, org2InputI, org2InputU, org2InputE, org2InputO, org2InputKa,
+                        org2InputW1, org2InputW2, org2InputW3];
+
+    // ===== 整理②：表を使って答える ことばの問題 =====
+    // 長いと感じるときは この数を へらす（0 で もとの6問にもどる）
+    const ORG2_WORD_COUNT = 3;
+    // c には 4つの組み合わせの人数がわたる
+    //   ii_oi 弟も妹もいる ／ in_oi 弟だけ ／ ii_on 妹だけ ／ in_on どちらもいない
+    //
+    // ★ ヒントは 下の二次元表で しめす（上の10人の表は かぞえさせない）。
+    //   arrow … 行の見出し・列の見出しから 交わるますへ やじるしを引く
+    //           { row:行見出しのid, col:列見出しのid, cell:交わるますのid }
+    //   els   … やじるしで示せない問題は、見るますを 点線で囲む
+    const ORG2_WORDS = [
+        { q:'弟も妹も いる人は 何人ですか。',
+          calc: c => c.ii_oi,
+          arrow:{ row:'th2-oto-iru',  col:'th2-imo-iru',  cell:'org2-cell-imo_iru-oto_iru' },
+          hint:'下の表で、弟の「いる」と 妹の「いる」が 交わる ますを 見よう。' },
+        { q:'弟も妹も いない人は 何人ですか。',
+          calc: c => c.in_on,
+          arrow:{ row:'th2-oto-inai', col:'th2-imo-inai', cell:'td2-e' },
+          hint:'下の表で、弟の「いない」と 妹の「いない」が 交わる ますを 見よう。' },
+        { q:'弟は いるけど、妹は いない人は 何人ですか。',
+          calc: c => c.in_oi,
+          arrow:{ row:'th2-oto-iru',  col:'th2-imo-inai', cell:'td2-a' },
+          hint:'下の表で、弟の「いる」と 妹の「いない」が 交わる ますを 見よう。' },
+        { q:'妹は いるけど、弟は いない人は 何人ですか。',
+          calc: c => c.ii_on,
+          arrow:{ row:'th2-oto-inai', col:'th2-imo-iru',  cell:'td2-u' },
+          hint:'下の表で、弟の「いない」と 妹の「いる」が 交わる ますを 見よう。' },
+        { q:'弟や妹がいる人調べで 答えた人は みんなで 何人ですか。',
+          calc: c => c.ii_oi + c.in_oi + c.ii_on + c.in_on,
+          arrow:{ row:'th2-oto-sum',  col:'th2-imo-sum',  cell:'td2-ka' },
+          hint:'下の表で、弟の「合計」と 妹の「合計」が 交わる ますを 見よう。' }
+    ];
+    let org2Words = ORG2_WORDS.slice(0, ORG2_WORD_COUNT);
     const btnOrg2Ok = document.getElementById('btn-org2-ok');
     const btnOrg2Reset = document.getElementById('btn-org2-reset');
     const org2Hanamaru = document.getElementById('org2-hanamaru');
@@ -1610,9 +1789,23 @@
             if (ho && hi) ii_oi++; else if (ho && !hi) in_oi++;
             else if (!ho && hi) ii_on++; else in_on++;
         }
+        // ㋖㋗ 表を使って答える ことばの問題（毎回 ちがう2つを えらぶ）
+        const wpool = ORG2_WORDS.slice();
+        for (let i = wpool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random()*(i+1));
+            const tmp = wpool[i]; wpool[i] = wpool[j]; wpool[j] = tmp;
+        }
+        org2Words = wpool.slice(0, ORG2_WORD_COUNT);
+        const counts = { ii_oi, in_oi, ii_on, in_on };
+        org2Words.forEach((w, n) => {
+            document.getElementById('org2-wtext-'+n).textContent = w.q;
+        });
+        const wv = org2Words.map(w => w.calc(counts));
+
         currentOrg2Answers = {
             a: in_oi, i: ii_oi+in_oi, u: ii_on, e: in_on,
-            o: in_oi+in_on, ka: ii_oi+in_oi+ii_on+in_on
+            o: in_oi+in_on, ka: ii_oi+in_oi+ii_on+in_on,
+            w1: wv[0], w2: wv[1], w3: wv[2]
         };
         document.getElementById('org2-cell-imo_iru-oto_iru').innerText = ii_oi;
         document.getElementById('org2-cell-imo_sum-oto_inai').innerText = ii_on+in_on;
@@ -1620,27 +1813,38 @@
     }
 
     // --- 1問ずつ出す ---
+    // cond は ヒントで 上の10人の表の どの人を囲むか
     const org2Steps = [
-        { id:'org2-a',  key:'a',  mark:'㋐' },
-        { id:'org2-i',  key:'i',  mark:'㋑' },
-        { id:'org2-u',  key:'u',  mark:'㋒' },
-        { id:'org2-e',  key:'e',  mark:'㋓' },
-        { id:'org2-o',  key:'o',  mark:'㋔' },
-        { id:'org2-ka', key:'ka', mark:'㋕' }
-    ];
+        { id:'org2-a',  key:'a',  mark:'㋐', cond:(o,i)=>o&&!i },
+        { id:'org2-i',  key:'i',  mark:'㋑', cond:(o,i)=>o },
+        { id:'org2-u',  key:'u',  mark:'㋒', cond:(o,i)=>!o&&i },
+        { id:'org2-e',  key:'e',  mark:'㋓', cond:(o,i)=>!o&&!i },
+        { id:'org2-o',  key:'o',  mark:'㋔', cond:(o,i)=>!i },
+        { id:'org2-ka', key:'ka', mark:'㋕', cond:()=>true },
+        { id:'org2-word1', key:'w1', word:0 },
+        { id:'org2-word2', key:'w2', word:1 },
+        { id:'org2-word3', key:'w3', word:2 }
+    ].slice(0, 6 + ORG2_WORD_COUNT);
     let org2Step = 0;
 
     function showOrg2Question() {
         const st = org2Steps[org2Step];
         document.getElementById('org2-step-num').textContent = org2Step + 1;
         document.getElementById('org2-step-total').textContent = org2Steps.length;
-        document.getElementById('org2-q-text').innerHTML =
-            'ひょうの ' + st.mark + 'に あてはまる数を 書きましょう。'
-            + '<span class="side-hint">ますをえらぶと、かんけいのあるところに色がつきます。</span>';
+        document.getElementById('org2-q-text').innerHTML = (st.word === undefined)
+            ? 'ひょうの ' + st.mark + 'に あてはまる数を 書きましょう。'
+              + '<span class="side-hint">わからないときは 💡ヒント を おそう。</span>'
+            : 'ひょうを つかって 答えましょう。';
+        // ことばの問題の行は、いまの問題のものだけ出す
+        [0,1,2].forEach(n => {
+            const row = document.getElementById('org2-wrow-'+n);
+            if (row) row.style.display = (st.word === n) ? '' : 'none';
+        });
         org2Inputs.forEach(el => { if (!el.classList.contains('done-input')) el.disabled = true; });
         const cur = document.getElementById(st.id);
         cur.disabled = false;
-        checkOrg2Inputs(); hideHint();
+        checkOrg2Inputs(); hideHint(); updateNumpadVisibility();
+        Challenge10.newProblem();     // この小問の ミス数を 0にする
         cur.focus();
     }
 
@@ -1665,6 +1869,7 @@
         el.disabled = true; el.classList.add('done-input');
         playSound(SOUND_CORRECT);
         if (org2Step < org2Steps.length - 1) {
+            chalCount(false);
             org2ResultMsg.innerText = '⭕';
             org2ResultMsg.className = 'result-message correct-text show';
             setTimeout(() => {
@@ -1673,12 +1878,13 @@
                 showOrg2Question();
             }, 800);
         } else {
+            hideHint();                 // やじるしや 囲みを 消してから はなまるを 出す
             org2ResultMsg.innerText = '大正解！';
             org2ResultMsg.className = 'result-message correct-text show';
             org2Hanamaru.classList.add('show');
             hanamaruAutoHide(() => org2Hanamaru.classList.remove('show'));
             updateStreak(true);
-            Challenge10.done();
+            chalCount(true);
         }
     });
 
@@ -1759,6 +1965,9 @@
     let readQuestions = [];   // [ [{id, ans}, ...], ... ] 1問ずつ出す
     let readPickedSpan = null;  // ③でえらんだ区間（0〜6）
     let readStep = 0;
+    // 「正しく説明しているのは だれですか」で、いま どの文の ヒントを
+    // 出しているか（0・1・2）。ヒントボタンを おすたびに つぎの文へ 進む
+    let hintSayIndex = 0;
 
     const btnReadOk = document.getElementById('btn-read-ok');
     const btnReadReset = document.getElementById('btn-read-reset');
@@ -1795,6 +2004,15 @@
         }
         rCtx.restore();
     }
+    // ヒント用：Canvas の上に オレンジの点線で 四角く囲む
+    function drawHintBox(x, y, w, h) {
+        // ぬりつぶすと 中の文字や目もりの線が 見えなくなるので、線だけで囲む
+        rCtx.save();
+        rCtx.strokeStyle='#ff9800'; rCtx.lineWidth=3; rCtx.setLineDash([8,5]);
+        rCtx.strokeRect(x, y, w, h);
+        rCtx.setLineDash([]);
+        rCtx.restore();
+    }
     function getReadRows() {
         return [...document.querySelector('#read-type'+readType).querySelectorAll('.rq')];
     }
@@ -1809,12 +2027,14 @@
     // いまの1問だけを表示する
     function showReadQuestion() {
         const rows = getReadRows();
-        rows.forEach((r, i) => { r.style.display = (i === readStep) ? '' : 'none'; });
+        const ri = readStep;
+        rows.forEach((r, i) => { r.style.display = (i === ri) ? '' : 'none'; });
         document.getElementById('read-step-num').textContent = readStep + 1;
         document.getElementById('read-step-total').textContent = readQuestions.length;
-        checkReadFilled(); hideHint();
+        checkReadFilled(); hideHint(); updateNumpadVisibility();
+        Challenge10.newProblem();     // この小問の ミス数を 0にする
         readCanvas.style.cursor = isSpanPickStep() ? 'pointer' : 'default';
-        const first = rows[readStep] && rows[readStep].querySelector('.num-input');
+        const first = rows[ri] && rows[ri].querySelector('.num-input');
         if (first) first.focus();
     }
 
@@ -1874,36 +2094,76 @@
         el.addEventListener('change', () => { el.classList.remove('input-error'); checkReadFilled(); });
     });
 
+    // ===== 読み取りタブの 3択ボタン =====
+    // ボタンを押すと、見えない答えの欄（input type="hidden"）に 文字が入る。
+    // こうすると OKボタンの 判定のしくみを そのまま使える。
+    //   ボタンの組の id → 答えを入れる欄の id
+    const READ_OPT_GROUPS = {
+        'rt1-x-opts':   'rt1-xaxis',
+        'rt1-y-opts':   'rt1-yaxis',
+        'rt3-who-opts': 'rt3-who'
+    };
+    // いまの問題に ふくまれる ボタンの組を返す
+    function readOptGroupsFor(q) {
+        const ids = (q || []).map(item => item.id);
+        return Object.keys(READ_OPT_GROUPS).filter(g => ids.indexOf(READ_OPT_GROUPS[g]) >= 0);
+    }
+    function readOptButtons(gid) {
+        const box = document.getElementById(gid);
+        return box ? [...box.querySelectorAll('.title-opt')] : [];
+    }
+    function resetReadOptButtons() {
+        Object.keys(READ_OPT_GROUPS).forEach(gid => {
+            readOptButtons(gid).forEach(b => {
+                b.disabled = false;
+                b.classList.remove('selected','input-error','correct');
+            });
+        });
+    }
+    document.getElementById('side-read').addEventListener('click', e => {
+        const btn = e.target.closest ? e.target.closest('.title-opt') : null;
+        if (!btn || btn.disabled) return;
+        const grp = btn.closest('.org-opts');
+        if (!grp || !READ_OPT_GROUPS[grp.id]) return;
+        readOptButtons(grp.id).forEach(b => b.classList.remove('selected','input-error'));
+        btn.classList.add('selected');
+        const inp = document.getElementById(READ_OPT_GROUPS[grp.id]);
+        inp.value = btn.dataset.v;
+        inp.dispatchEvent(new Event('input', { bubbles:true }));
+    });
+
     // ======== TYPE 1: 1日の気温 ========
     function spanLabel(i){ return readTimeLabels[i]+'と'+readTimeLabels[i+1]+'の間'; }
 
     // こたえが1つに決まるデータになるまで作りなおす
-    function makeType1Data() {
-        const FALLBACK=[14,16,19,22,26,24,21,19];
-        const deltas=[
-            ()=>1+Math.floor(Math.random()*4),
-            ()=>2+Math.floor(Math.random()*3),
-            ()=>1+Math.floor(Math.random()*3),
-            ()=>Math.floor(Math.random()*3),
-            ()=>-1+Math.floor(Math.random()*3),
-            ()=>-(1+Math.floor(Math.random()*3)),
-            ()=>-(1+Math.floor(Math.random()*3))
-        ];
-        function ok(d){
-            if(Math.min(...d)<11 || Math.max(...d)>29) return false;
-            const mx=Math.max(...d);
-            if(d.filter(v=>v===mx).length!==1) return false;       // 最高気温は1か所だけ
-            const rises=[]; for(let i=0;i<7;i++) rises.push(d[i+1]-d[i]);
+    // tStep … たてのじくの 1めもりが 何度を表すか（1 か 2）
+    // たてのじくは いつも 10度〜30度。1めもりが2度のときは 線の数が半分になり、
+    // 点が かならず 線の上にのるよう 気温は ぐう数だけを使う。
+    // 中では「目もり何本ぶん」で計算し、さいごに 気温に直している。
+    function makeType1Data(tStep) {
+        const FALLBACK = (tStep===1) ? [14,16,19,22,26,24,21,19]
+                                     : [12,14,18,24,26,24,20,16];
+        const r = n => Math.floor(Math.random()*n);
+        const LV = 20 / tStep;                     // 目もりの数（1度きざみ=20、2度きざみ=10）
+        const deltas = (tStep===1)
+            ? [ ()=>1+r(4), ()=>2+r(3), ()=>1+r(3), ()=>r(3), ()=>-1+r(3), ()=>-(1+r(3)), ()=>-(1+r(3)) ]
+            : [ ()=>1+r(3), ()=>1+r(3), ()=>r(3), ()=>r(3), ()=>-r(2), ()=>-(1+r(2)), ()=>-(1+r(2)) ];
+        const minRise = (tStep===1) ? 2 : 1;       // 上がり方が はっきり分かるように
+        function ok(p){
+            if(Math.min(...p)<1 || Math.max(...p)>LV-1) return false;
+            const mx=Math.max(...p);
+            if(p.filter(v=>v===mx).length!==1) return false;       // 最高気温は1か所だけ
+            const rises=[]; for(let i=0;i<7;i++) rises.push(p[i+1]-p[i]);
             const mr=Math.max(...rises);
-            if(mr<2) return false;                                  // 上がり方がはっきり分かるように
-            if(rises.filter(r=>r===mr).length!==1) return false;    // 最大の上がり方も1か所だけ
+            if(mr<minRise) return false;
+            if(rises.filter(x=>x===mr).length!==1) return false;   // 最大の上がり方も1か所だけ
             return true;
         }
         for(let t=0;t<400;t++){
-            let temp=13+Math.floor(Math.random()*4);
-            const d=[temp];
-            for(const fn of deltas){ temp+=fn(); d.push(temp); }
-            if(ok(d)) return d;
+            let v = (tStep===1) ? 3+r(4) : 1+r(3);
+            const p=[v];
+            for(const fn of deltas){ v+=fn(); p.push(v); }
+            if(ok(p)) return p.map(x => 10 + x*tStep);
         }
         return FALLBACK.slice();
     }
@@ -1919,7 +2179,13 @@
         // ★ こたえが1つに決まるデータだけを使う
         //    （いちばん高い気温が2回出てきたり、上がり方が同じ区間が2つあると
         //      正しいこたえが2つできてしまうため）
-        const d = makeType1Data();
+        // ★ たてのじくの 1めもり（1度 か 2度）を 毎回えらぶ
+        const tStep = (Math.random() < 0.5) ? 1 : 2;
+        const d = makeType1Data(tStep);
+
+        // ①② 横のじく・たてのじくは 何を表すか
+        buildAxisOptions('rt1-x-opts', '時こく', AXIS_X_POOL);
+        buildAxisOptions('rt1-y-opts', '気温',  AXIS_Y_POOL, '温度');
 
         const q1i=Math.floor(Math.random()*8);
         document.getElementById('rq1-text').textContent=readTimeLabels[q1i]+'の気温は何度ですか。';
@@ -1928,23 +2194,52 @@
 
         readPickedSpan=null;
         readAnswers={q1val:d[q1i],maxTime:readTimeLabels[maxI],maxTemp:d[maxI],riseFrom:readTimeLabels[rI],riseTo:readTimeLabels[rI+1]};
-        readQuestions=[
+        const allQ=[
+            [{id:'rt1-xaxis', ans:'時こく'}],
+            [{id:'rt1-yaxis', ans:'気温'}],
+            [{id:'rt1-step', ans:tStep}],
             [{id:'rq1', ans:d[q1i]}],
             [{id:'rq2-time', ans:readTimeLabels[maxI]}, {id:'rq2-temp', ans:d[maxI]}],
             [{id:'rq3-span', ans:spanLabel(rI)}]
         ];
-        readData={type:1,d,q1i,maxI,M,gW,gH,yMin,yMax,yS,yBot,gx,gy};
+        readQuestions = allQ;
+        readData={type:1,d,q1i,maxI,tStep,M,gW,gH,yMin,yMax,yS,yBot,gx,gy};
+    }
+
+    // じくの意味をえらぶ 3択ボタンを作る
+    //   pool … まちがいの えらび元　must … かならず入れる まちがい
+    // ★ たてのじくには かならず「温度」を入れる。
+    //   じくに（度）と書いてあるので「温度」を えらぶ子が 多い。
+    //   正しくは 空気の あたたかさ＝「気温」で、そこは グラフの表題で 見分ける。
+    const AXIS_X_POOL = ['日にち','月','人数','気温','こう水量'];
+    const AXIS_Y_POOL = ['時こく','月','人数','こう水量','日にち'];
+    function buildAxisOptions(groupId, correct, pool, must) {
+        const others = must ? [must] : [];
+        const rest = pool.filter(v => v !== correct && v !== must).sort(() => Math.random()-0.5);
+        while (others.length < 2 && rest.length) others.push(rest.shift());
+        const opts = [correct, ...others].sort(() => Math.random()-0.5);
+        const box = document.getElementById(groupId);
+        box.innerHTML = '';
+        opts.forEach(v => {
+            const b = document.createElement('button');
+            b.type='button'; b.className='title-opt'; b.dataset.v=v; b.textContent=v;
+            box.appendChild(b);
+        });
     }
     function drawType1() {
         const{d,q1i,maxI,M,gW,gH,yMin,yMax,yS,yBot,gx,gy}=readData;
+        const tStep = readData.tStep || 1;
         rCtx.clearRect(0,0,rW,rH);
         rCtx.fillStyle='#333'; rCtx.font='bold 17px "M PLUS Rounded 1c"'; rCtx.textAlign='center';
         rCtx.fillText('1日の気温の変わり方',rW/2,16);
         rCtx.textAlign='right'; rCtx.textBaseline='middle'; rCtx.font='bold 15px "M PLUS Rounded 1c"';
-        for(let v=yMin;v<=yMax;v++){
-            const y=gy(v); rCtx.strokeStyle=(v%5===0)?'#5f9bd8':'#b3d0f0'; rCtx.beginPath(); rCtx.lineWidth=(v%5===0)?2:1;
+        // 細い線は 1めもりごと。数字は 5めもりごとに入れる
+        //   1めもり1度 → 10,15,20,25,30 ／ 1めもり2度 → 10,20,30
+        for(let v=yMin;v<=yMax;v+=tStep){
+            const y=gy(v); const major=(((v-yMin)/tStep)%5===0);
+            rCtx.strokeStyle=major?'#5f9bd8':'#b3d0f0'; rCtx.beginPath(); rCtx.lineWidth=major?2:1;
             rCtx.moveTo(M.left,y); rCtx.lineTo(rW-M.right,y); rCtx.stroke();
-            if(v%5===0){rCtx.fillStyle='#333'; rCtx.fillText(v,M.left-8,y);}
+            if(major){rCtx.fillStyle='#333'; rCtx.fillText(v,M.left-8,y);}
         }
         const axB = yBot + yS*2.4;   // 波線より下にある よこ軸
         rCtx.textAlign='center'; rCtx.textBaseline='top';
@@ -1971,9 +2266,22 @@
         // ヒント：見るところの時こくに たての線を引き、下の数字を ○で囲む
         //   ① 聞かれている時こく　② いちばん気温が高い時こく（答えの時こく）
         if (hintOn) {
-            if (readStep === 0 && q1i !== undefined) {
+            const hs = readStep;   // ①=0 … ⑥=5
+            if (hs === 0) {
+                // ① 横のじく … 下の数字・午前午後・（時）を 囲む
+                drawHintBox(M.left-12, axB+2, rW-M.left+2, 48);
+            } else if (hs === 1) {
+                // ② たてのじく …（度）と グラフの表題を 囲む
+                //    「度」だけでは 温度か気温か 分からないので、表題で 見分けさせる
+                drawHintBox(M.left-33, M.top-40, 66, 27);
+                drawHintBox(rW/2-108, 2, 216, 27);
+            } else if (hs === 2) {
+                // ③ 1めもり … となりあう数字の間を 囲んで 細い線を かぞえさせる
+                const top = gy(yMin + 5*tStep);
+                drawHintBox(6, top, M.left+114, gy(yMin)-top);
+            } else if (hs === 3 && q1i !== undefined) {
                 drawReadGuideLine(gx(q1i), M.top, axB, axB + 16);
-            } else if (readStep === 1 && maxI !== undefined) {
+            } else if (hs === 4 && maxI !== undefined) {
                 drawReadGuideLine(gx(maxI), M.top, axB, axB + 16);
             }
         }
@@ -2080,39 +2388,149 @@
     }
 
     // ======== TYPE 3: 降水量(棒)+気温(折れ線) ========
+    // ★ こう水量の出かたが ちがう 3しゅるいの町を 用意してある。
+    //   こうすると、下の3つの文の どれが 正しくなるかが 回ごとに 変わる。
+    //     ・冬に多い（日本海がわ）        → ③の文が 正しくなりやすい
+    //     ・夏に多い（太平洋がわ）        → ②の文が 正しくなりやすい
+    //     ・夏に とても少ない（地中海）   → ①の文が 正しくなりやすい
+    //   数は 目もりが 読みやすいように ならしてある。
     const precipCities = [
-        {name:'柏崎市',pd:[350,250,150,100,120,150,200,150,180,200,280,350],td:[3,3,7,12,17,21,25,27,23,17,11,5]},
-        {name:'新潟市',pd:[300,210,130,90,100,130,180,140,160,180,250,320],td:[2,3,6,12,17,21,25,27,23,16,10,5]},
-        {name:'金沢市',pd:[280,180,150,120,130,170,220,150,200,180,260,300],td:[4,4,7,13,18,22,26,28,24,17,12,6]}
+        {name:'柏崎市',           pd:[350,250,150,100,120,150,200,150,180,200,280,340], td:[3,3,7,12,17,21,25,27,23,17,12,5]},
+        {name:'新潟市',           pd:[300,210,130,90,100,130,180,140,160,180,250,320],  td:[2,3,6,12,17,21,25,27,23,16,10,5]},
+        {name:'金沢市',           pd:[280,180,150,120,130,170,220,150,200,210,260,300], td:[4,4,7,13,18,22,26,28,24,17,12,6]},
+        {name:'高知市',           pd:[60,90,190,240,280,310,330,340,300,200,100,70],    td:[6,7,10,15,19,23,27,28,25,19,14,9]},
+        {name:'宮崎市',           pd:[70,100,170,220,260,300,340,360,310,190,110,80],   td:[8,9,12,16,20,23,27,28,25,20,14,10]},
+        {name:'イタリアのローマ', pd:[80,70,60,50,40,20,10,20,50,90,100,90],            td:[8,9,12,15,20,24,28,27,23,18,15,8]},
+        {name:'ギリシャのアテネ', pd:[90,80,70,60,40,20,10,20,50,100,110,100],          td:[10,11,13,17,21,26,29,28,24,19,16,10]}
     ];
+
+    // たての目もりの いちばん上。こう水量が 少ない町では 200 にして、
+    // ぼうが つぶれないようにする。細い線 1本ぶんは いつも「気温1度」に そろう
+    function precipAxisMax(pd) { return (Math.max(...pd) <= 180) ? 200 : 400; }
+
+    // ===== 3つの文を 見るために 必要な数を まとめて 出す =====
+    function type3Facts(pd, td) {
+        const pMaxV = Math.max(...pd), pMinV = Math.min(...pd), tMaxV = Math.max(...td);
+        const pMaxM = pd.indexOf(pMaxV), pMinM = pd.indexOf(pMinV), tMaxM = td.indexOf(tMaxV);
+        // 気温の 下がり方が いちばん大きい ところ
+        let dn = Infinity, dnI = 0;
+        for (let i = 0; i < 11; i++) { const v = td[i+1] - td[i]; if (v < dn) { dn = v; dnI = i; } }
+        let dnCount = 0;
+        for (let i = 0; i < 11; i++) { if (td[i+1] - td[i] === dn) dnCount++; }
+        // 気温は 上がっているのに こう水量は ふえていない ところ（②の 反れい）
+        let upI = -1, ups = [];
+        for (let i = 0; i < 11; i++) {
+            if (td[i+1] > td[i]) {
+                ups.push(i);
+                if (upI < 0 && pd[i+1] <= pd[i]) upI = i;
+            }
+        }
+        return { pMaxV, pMinV, tMaxV, pMaxM, pMinM, tMaxM, dn, dnI, dnCount, upI, ups,
+                 uniqPMax: pd.filter(v => v === pMaxV).length === 1,
+                 uniqPMin: pd.filter(v => v === pMinV).length === 1,
+                 uniqTMax: td.filter(v => v === tMaxV).length === 1 };
+    }
+
+    // ===== 教科書 □2② と 同じ 3つの文 =====
+    // どれが 正しいかは その回のグラフで 決まる。
+    // ヒントは 教科書の 赤い せつめいと 同じ考えかたで、グラフの上に しめす。
+    function type3SayList(pd, td) {
+        const f = type3Facts(pd, td);
+        // ヒントは「見るところを しめすだけ」。答えは 子どもが グラフを見て 決める。
+        // ① 気温が いちばん高い月は、こう水量が いちばん少ないです
+        //    → 気温が いちばん高い月に たての線を 引くだけ
+        const s1 = {
+            t:'気温が いちばん高い月は、こう水量が いちばん少ないです。',
+            ok: pd[f.tMaxM] === f.pMinV,
+            marks:{ vline:[f.tMaxM] },
+            hintText:'気温が いちばん高い月に たての線を 引いたよ。その月の こう水量が いちばん少ないか、ほかの ぼうと くらべよう。'
+        };
+        // ② 気温が 上がると、こう水量は かならず ふえています
+        //    → 気温が 上がっている ところ ぜんぶに 色を つけるだけ
+        const s2 = {
+            t:'気温が 上がると、こう水量は かならず ふえています。',
+            ok: f.upI < 0,
+            marks:{ span: f.ups.slice() },
+            hintText:'気温が 上がっている ところ ぜんぶに 色を つけたよ。そこで こう水量も ふえているか、1つずつ 見よう。'
+        };
+        // ③ 気温の 下がり方が いちばん大きいとき、こう水量は ふえています
+        //    → 気温の 下がり方が いちばん大きい ところに 色を つけるだけ
+        const s3 = {
+            t:'気温の 下がり方が いちばん大きいとき、こう水量は ふえています。',
+            ok: pd[f.dnI+1] > pd[f.dnI],
+            marks:{ span:[f.dnI] },
+            hintText:'気温の 下がり方が いちばん大きい ところに 色を つけたよ。その 2つの月の こう水量を くらべよう。'
+        };
+        return [s1, s2, s3];
+    }
+
+    // 答えが1つに決まるデータか どうか
+    //   ・こう水量の いちばん多い月／いちばん少ない月が それぞれ 1つ（①と もんだい①用）
+    //   ・気温の いちばん高い月が 1つ（もんだい②用）
+    //   ・気温の 下がり方が いちばん大きい ところが 1か所（③用）
+    //   ・3つの文の うち 正しいのが ちょうど 1つ
+    function type3DataOk(pd, td) {
+        const f = type3Facts(pd, td);
+        if (!f.uniqPMax || !f.uniqPMin || !f.uniqTMax) return false;
+        if (f.dnCount !== 1) return false;
+        return type3SayList(pd, td).filter(s => s.ok).length === 1;
+    }
+
     function genType3() {
         showReadType(3);
-        const city=precipCities[Math.floor(Math.random()*precipCities.length)];
-        // ★ こう水量・気温とも、いちばん多い（高い）月が1つに決まるデータだけを使う
-        let pdR, td;
-        for(let t=0;t<300;t++){
-            const pd=city.pd.map(v=>Math.max(10,v+Math.floor(Math.random()*60)-30));
-            pdR=pd.map(v=>Math.round(v/10)*10);
-            td=city.td.map(v=>v+Math.floor(Math.random()*3)-1);
-            const mp=Math.max(...pdR), mt=Math.max(...td);
-            if(pdR.filter(x=>x===mp).length===1 && td.filter(x=>x===mt).length===1) break;
-            if(t===299){ pdR=city.pd.map(v=>Math.round(v/10)*10); td=city.td.slice(); }
+        const city = precipCities[Math.floor(Math.random()*precipCities.length)];
+        // こう水量が 少ない町では ばらつきも 小さくする（形が くずれないように）
+        const jit = (Math.max(...city.pd) <= 180) ? 10 : 30;
+        let pdR = city.pd.map(v => Math.round(v/10)*10), td = city.td.slice();
+        for (let t = 0; t < 600; t++) {
+            const p = city.pd.map(v => Math.max(10, v + Math.floor(Math.random()*(jit*2+1)) - jit));
+            const pr = p.map(v => Math.round(v/10)*10);
+            const t2 = city.td.map(v => v + Math.floor(Math.random()*3) - 1);
+            if (type3DataOk(pr, t2)) { pdR = pr; td = t2; break; }
         }
         let maxP=-1,maxPM=0; for(let i=0;i<12;i++){if(pdR[i]>maxP){maxP=pdR[i];maxPM=i;}}
         let maxT=-Infinity,maxTM=0; for(let i=0;i<12;i++){if(td[i]>maxT){maxT=td[i];maxTM=i;}}
         readAnswers={q1month:monthLabels[maxPM],q1amount:pdR[maxPM],q2month:monthLabels[maxTM],q2temp:td[maxTM]};
+        // ③ 正しく説明しているのは だれか
+        const say = buildType3Says(pdR, td);
         readQuestions=[
             [{id:'rt3-month1', ans:maxPM+1}, {id:'rt3-amount', ans:pdR[maxPM]}],
-            [{id:'rt3-month2', ans:maxTM+1}, {id:'rt3-temp', ans:td[maxTM]}]
+            [{id:'rt3-month2', ans:maxTM+1}, {id:'rt3-temp', ans:td[maxTM]}],
+            [{id:'rt3-who', ans:say.answer}]
         ];
-        readData={type:3,city:city.name,pd:pdR,td};
+        readData={type:3,city:city.name,pd:pdR,td,t3says:say.says,
+                  pAxisMax:precipAxisMax(pdR), pStep:precipAxisMax(pdR)/40};
     }
+
+    // ===== ③「正しく 説明している文は どれですか」 =====
+    // 3つの文は 教科書と同じ。ならびじゅんだけ 毎回 入れかえる。
+    // 人の名前は 出さない（文だけを 読んで くらべさせる）。
+    // 答えは 何ばんめの文か（'say0'〜'say2'）で 持っている。
+    function buildType3Says(pd, td) {
+        const list = type3SayList(pd, td).sort(() => Math.random()-0.5);
+        const box = document.getElementById('rt3-who-opts');
+        box.innerHTML = '';
+        let answer = '';
+        const says = [];
+        list.forEach((s, n) => {
+            if (s.ok) answer = 'say' + n;
+            says.push({ t:s.t, ok:s.ok, marks:s.marks, hintText:s.hintText });
+            const b = document.createElement('button');
+            b.type='button'; b.className='title-opt'; b.dataset.v='say' + n;
+            b.textContent = s.t;
+            box.appendChild(b);
+        });
+        return { answer, says };
+    }
+
     function drawType3() {
         const{city,pd,td}=readData;
         const M={top:58,right:62,bottom:48,left:62};
         const gW=rW-M.left-M.right, gH=rH-M.top-M.bottom;
         const gx=i=>M.left+(i+0.5)*(gW/12);
-        const pMax=400, tMax=40;
+        // たての目もりは 200 か 400。細い線 1本は いつも「気温1度」ぶん
+        const pMax=readData.pAxisMax||400, tMax=40;
+        const pStep=pMax/40, pMajor=pMax/4, pMid=pMax/8;
         const gyP=v=>M.top+gH-v/pMax*gH;
         const gyT=v=>M.top+gH-v/tMax*gH;
         // ヒント：聞かれていないほうのグラフを うすくして、見るところを はっきりさせる
@@ -2126,14 +2544,14 @@
         rCtx.fillText(city+'のこう水量と気温',rW/2,16);
         // left Y grid (precip)
         rCtx.textAlign='right'; rCtx.textBaseline='middle'; rCtx.font='bold 15px "M PLUS Rounded 1c"';
-        for(let v=0;v<=pMax;v+=10){
+        for(let v=0;v<=pMax;v+=pStep){
             const y=gyP(v);
-            rCtx.strokeStyle=(v%100===0)?'#5f9bd8':((v%50===0)?'#87b6e6':'#b3d0f0');
-            rCtx.lineWidth=(v%100===0)?2:((v%50===0)?1.5:1);
+            rCtx.strokeStyle=(v%pMajor===0)?'#5f9bd8':((v%pMid===0)?'#87b6e6':'#b3d0f0');
+            rCtx.lineWidth=(v%pMajor===0)?2:((v%pMid===0)?1.5:1);
             rCtx.beginPath(); rCtx.moveTo(M.left,y); rCtx.lineTo(rW-M.right,y); rCtx.stroke();
-            if(v%100===0){rCtx.save(); if(dimBar) rCtx.globalAlpha=DIM; rCtx.fillStyle='#333'; rCtx.fillText(v,M.left-8,y); rCtx.restore();}
+            if(v%pMajor===0){rCtx.save(); if(dimBar) rCtx.globalAlpha=DIM; rCtx.fillStyle='#333'; rCtx.fillText(v,M.left-8,y); rCtx.restore();}
         }
-        // right Y labels (temp) — 50mm ＝ 5度、10mm ＝ 1度 で目もりが そろっている
+        // right Y labels (temp) — 細い線 1本が 1度 に そろえてある
         rCtx.textAlign='left';
         rCtx.save(); if(dimLine) rCtx.globalAlpha=DIM;
         for(let v=0;v<=tMax;v+=5){
@@ -2179,6 +2597,44 @@
         rCtx.strokeStyle='#ff3333'; rCtx.lineWidth=3; rCtx.beginPath(); rCtx.moveTo(lx,ly+22); rCtx.lineTo(lx+20,ly+22); rCtx.stroke();
         rCtx.fillStyle='#333'; rCtx.fillText('気温',lx+26,ly+22);
         rCtx.restore();
+
+        // ③「正しく説明しているのは だれですか」の ヒント
+        //   えらんだ文の たしかめかたを グラフの上に しめす（1文ずつ 3通り）
+        if (hintOn && readStep === 2 && readData.t3says && readData.t3says[hintSayIndex]) {
+            const mk = readData.t3says[hintSayIndex].marks || {};
+            const OR = '#ff9800', PU = '#8e24aa';
+            rCtx.save();
+            // たての線 ＋ 下の月の数字を ○で かこむ
+            (mk.vline||[]).forEach(i => {
+                rCtx.strokeStyle=OR; rCtx.lineWidth=3; rCtx.setLineDash([9,6]);
+                rCtx.beginPath(); rCtx.moveTo(gx(i),M.top); rCtx.lineTo(gx(i),M.top+gH); rCtx.stroke();
+                rCtx.setLineDash([]); rCtx.lineWidth=3.5;
+                rCtx.beginPath(); rCtx.arc(gx(i),M.top+gH+17,15,0,Math.PI*2); rCtx.stroke();
+            });
+            // 気温の線の その区間を 太くする
+            rCtx.setLineDash([]); rCtx.lineCap='round';
+            (mk.span||[]).forEach(i => {
+                rCtx.strokeStyle='rgba(255,152,0,0.9)'; rCtx.lineWidth=10;
+                rCtx.beginPath(); rCtx.moveTo(gx(i),gyT(td[i])); rCtx.lineTo(gx(i+1),gyT(td[i+1])); rCtx.stroke();
+            });
+            rCtx.lineCap='butt';
+            // ぼうを かこむ
+            const boxBar = (i,col) => {
+                const x=gx(i)-bw/2, y=gyP(pd[i]);
+                rCtx.strokeStyle=col; rCtx.lineWidth=4; rCtx.setLineDash([]);
+                rCtx.strokeRect(x-3, y-3, bw+6, gyP(0)-y+6);
+            };
+            (mk.bar ||[]).forEach(i => boxBar(i, OR));
+            (mk.bar2||[]).forEach(i => boxBar(i, PU));
+            // 気温の点を ○で かこむ
+            const ringT = (i,col) => {
+                rCtx.strokeStyle=col; rCtx.lineWidth=3.5; rCtx.setLineDash([]);
+                rCtx.beginPath(); rCtx.arc(gx(i),gyT(td[i]),11,0,Math.PI*2); rCtx.stroke();
+            };
+            (mk.tpt ||[]).forEach(i => ringT(i, OR));
+            (mk.tpt2||[]).forEach(i => ringT(i, PU));
+            rCtx.restore();
+        }
     }
 
     // ======== 共通: 描画・生成・判定 ========
@@ -2187,8 +2643,11 @@
     // 出題タイプ（1:折れ線 / 2:折れ線と折れ線 / 3:折れ線と ぼう）は
     // 3つを1セットにして シャッフルし、順に出していく。
     // → 3問に1回ずつ かならず出るので、かたよらない
+    // ただし 上のタブで 種類をえらんだときは、その種類だけを 出しつづける。
     let readTypeBag = [];
+    let readTypeLock = null;          // null＝じゅんばんに出す ／ 1・2・3＝その種類だけ
     function nextReadType() {
+        if (readTypeLock) return readTypeLock;
         if (readTypeBag.length === 0) {
             readTypeBag = [1, 2, 3];
             for (let i = readTypeBag.length - 1; i > 0; i--) {
@@ -2199,16 +2658,33 @@
         return readTypeBag.shift();
     }
 
+    // いま出ている種類のタブを 光らせる
+    function updateReadTabs() {
+        document.querySelectorAll('.read-tab').forEach(b => {
+            b.classList.toggle('active', Number(b.dataset.t) === readType);
+        });
+    }
+    // タブを押したら その種類の問題を 出しなおす。
+    document.getElementById('read-tabs').addEventListener('click', e => {
+        const b = e.target.closest ? e.target.closest('.read-tab') : null;
+        if (!b) return;
+        readTypeLock = Number(b.dataset.t);
+        readTypeBag = [];
+        generateReadData();
+    });
+
     function generateReadData() {
         Challenge10.newProblem();
         clearHanamaruTimer();
         const t = nextReadType();
         if(t===1)genType1(); else if(t===2)genType2(); else genType3();
+        updateReadTabs();
         drawReadCanvas();
         // reset all inputs
         document.querySelectorAll('#side-read input, #side-read select').forEach(el=>{
             el.value=''; el.disabled=false; el.classList.remove('input-error','done-input');
         });
+        resetReadOptButtons();
         readResultMsg.textContent=''; readResultMsg.style.color='';
         document.getElementById('read-hanamaru').classList.remove('show');
         readPickedSpan = null;
@@ -2236,16 +2712,41 @@
         if (!q) return;
         const ok = judgeReadEls(q);
         btnReadOk.disabled = true;
+        const groups = readOptGroupsFor(q);
         if (!ok) {
+            // 3択ボタンの問題では、まちがえた組だけ 赤くして、あとで 消してやり直させる。
+            // 合っている組（たとえば 横のじくだけ 正解）は えらんだまま のこす。
+            const wrongGroups = groups.filter(gid =>
+                document.getElementById(READ_OPT_GROUPS[gid]).classList.contains('input-error'));
+            wrongGroups.forEach(gid => {
+                readOptButtons(gid).forEach(b => {
+                    if (b.classList.contains('selected')) b.classList.add('input-error');
+                });
+            });
             playSound(SOUND_WRONG); updateStreak(false); Challenge10.miss();
             readResultMsg.textContent = 'ざんねん… もう一度';
             readResultMsg.style.color = '#4facfe';
-            setTimeout(() => { readResultMsg.textContent = ''; checkReadFilled(); }, 1600);
+            setTimeout(() => {
+                readResultMsg.textContent = '';
+                wrongGroups.forEach(gid => {
+                    const inp = document.getElementById(READ_OPT_GROUPS[gid]);
+                    inp.value = ''; inp.classList.remove('input-error');
+                    readOptButtons(gid).forEach(b => b.classList.remove('selected','input-error'));
+                });
+                checkReadFilled();
+            }, 1600);
             return;
         }
+        groups.forEach(gid => {
+            readOptButtons(gid).forEach(b => {
+                b.disabled = true;
+                if (b.classList.contains('selected')) { b.classList.remove('selected'); b.classList.add('correct'); }
+            });
+        });
         getAllReadEls().forEach(el => { el.disabled = true; el.classList.add('done-input'); });
         playSound(SOUND_CORRECT);
         if (readStep < readQuestions.length - 1) {
+            chalCount(false);
             readResultMsg.textContent = '⭕ せいかい！';
             readResultMsg.style.color = '#ff3333';
             setTimeout(() => {
@@ -2254,12 +2755,13 @@
                 showReadQuestion();
             }, 900);
         } else {
+            hideHint();                 // ヒントのしるしを 消してから はなまるを 出す
             readResultMsg.textContent = '🎉 大正解！';
             readResultMsg.style.color = '#ff3333';
             document.getElementById('read-hanamaru').classList.add('show');
             hanamaruAutoHide(() => document.getElementById('read-hanamaru').classList.remove('show'));
             updateStreak(true);
-            Challenge10.done();
+            chalCount(true);
         }
     });
 
@@ -2321,6 +2823,25 @@
     // ========================================
     //  テンキー ロジック
     // ========================================
+    // ★ テンキーで うちこむ欄が ない問題では、テンキーを かくす。
+    //   （文章や ことばを えらぶ問題・グラフに点をうつ問題など）
+    //   「グラフに点をうつ問題でも テンキーを出しておきたい」ときは
+    //   下の graph の行を  need = (graphStep !== 2);  に変えてください。
+    function updateNumpadVisibility() {
+        const pad = document.getElementById('numpad');
+        if (!pad) return;
+        let need = true;
+        if (currentTab === 'graph') {
+            need = (graphStep === 1);                       // ①たてのじくの□ だけ
+        } else if (currentTab === 'read') {
+            need = getAllReadEls().some(el => el.classList.contains('num-input'));
+        } else if (currentTab === 'organize') {
+            need = !(orgSteps[orgStep] || {}).opts;         // 3択ボタンの問題では 出さない
+        }
+        // 整理②は どの問題も 数を書くので いつも出す
+        pad.style.display = need ? '' : 'none';
+    }
+
     let activeNumInput = null;
     document.addEventListener('focusin', (e) => {
         // num-input がフォーカスされたら activeNumInput を更新
@@ -2373,17 +2894,23 @@
     ];
     const READ_HINTS = {
         1: [
-            { },                                                      // ① たての線で しめす
-            { text:'いちばん高いところの 点を さがそう。' },
-            { text:'線が いちばん急に 立ち上がっているところを さがそう。' }
+            { text:'横のじくの 下に 書いてある 数字と ことばを 見よう。' },                    // ① 横のじく
+            { text:'（度）は たんい。「何の 度」なのかは、グラフの表題に 書いてあるよ。' },     // ② たてのじく
+            { text:'となりあう 数字の間に、細い線が 何本 あるか かぞえよう。' },              // ③ 1めもり
+            { },                                                      // ④ たての線で しめす
+            { text:'いちばん高いところの 点を さがそう。' },            // ⑤
+            { text:'線が いちばん急に 立ち上がっているところを さがそう。' }  // ⑥
         ],
         2: [
             { },                                                      // ① たての線＋はん例の囲み
             { text:'2本の線が いちばん近づいている月を さがそう。' }
         ],
         3: [
-            { text:'青いぼう。目もりは 左がわ。細い線 1本が 10mm。' },
-            { text:'赤い折れ線。目もりは 右がわ。細い線 1本が 1度。' }
+            // 目もりは 町によって 5mm きざみ／10mm きざみ に 変わるので、
+            // そのつど 文を 作る（dynText）
+            { dynText: () => '青いぼう。目もりは 左がわ。細い線 1本が ' + (readData.pStep || 10) + 'mm。' },
+            { text:'赤い折れ線。目もりは 右がわ。細い線 1本が 1度。' },
+            { text:'1つずつ グラフで たしかめよう。1つでも ちがうところが あれば、その文は まちがい。' }
         ]
     };
     const ORG_HINTS = [
@@ -2399,14 +2926,28 @@
                '#cell-taiiku-suri','#td1-i','#cell-taiiku-kiri',
                '#cell-kyoushitsu-suri','#cell-kyoushitsu-dabo','#cell-kyoushitsu-kiri'] }
     ];
+    // 整理②の ㋐〜㋕のヒント。
+    // ★ 下の表の中で たし算・ひき算をすれば 求められる問題では、
+    //   上の10人の表を かぞえさせない（dyn:'org2' を つけない）。
+    //   上の表を かぞえる ひつようが あるのは ㋐だけ。
     const ORG2_HINTS = [
+        // ㋐ ここだけは 上の表を かぞえるしかない
         { text:'囲んだ人（弟が◯で 妹が✕）を かぞえよう。', dyn:'org2' },
-        { text:'囲んだ 2つの数を たそう。',
+        // ㋑ 弟「いる」の行を たす
+        { text:'弟の「いる」の 行。囲んだ 2つの数を たそう。',
           els:['#th2-oto-iru','#org2-cell-imo_iru-oto_iru','#td2-a'] },
-        { text:'囲んだ人（弟が✕で 妹が◯）を かぞえよう。', dyn:'org2' },
-        { text:'囲んだ人（弟も妹も ✕）を かぞえよう。',     dyn:'org2' },
-        { text:'囲んだ人（妹が✕）を かぞえよう。',         dyn:'org2' },
-        { text:'囲んだ人 ぜんいんを かぞえよう。',          dyn:'org2' }
+        // ㋒ 妹「いる」の列の 合計から ひく
+        { text:'妹の「いる」の たての列。合計から 上の数を ひこう。',
+          els:['#th2-imo-iru','#org2-cell-imo_iru-oto_iru','#org2-cell-imo_iru-oto_sum'] },
+        // ㋓ 弟「いない」の行の 合計から ひく
+        { text:'弟の「いない」の 行。合計から ㋒を ひこう。',
+          els:['#th2-oto-inai','#td2-u','#org2-cell-imo_sum-oto_inai'] },
+        // ㋔ 妹「いない」の列を たす
+        { text:'妹の「いない」の たての列。㋐と ㋓を たそう。',
+          els:['#th2-imo-inai','#td2-a','#td2-e'] },
+        // ㋕ 合計の列を たす
+        { text:'いちばん右の 合計の列。㋑と その下の数を たそう。',
+          els:['#th2-imo-sum','#td2-i','#org2-cell-imo_sum-oto_inai'] }
     ];
 
     // 整理①：②で聞かれている場所の行
@@ -2419,17 +2960,87 @@
         return rows[currentOrgAnswers.q2placeIdx || 0];
     }
 
-    // 整理②：上の表から、あてはまる人の列を えらぶ
+    // ========================================
+    //  整理②：下の表に やじるしを ひく（ことばの問題のヒント）
+    // ========================================
+    // 行の見出し（弟の いる／いない／合計）から 右へ、
+    // 列の見出し（妹の いる／いない／合計）から 下へ やじるしを のばし、
+    // 交わる ますを しめす。表のはばは 画面によって 変わるので、
+    // そのつど 位置をはかって SVG で 描いている。
+    const ORG2_ARROW_ID = 'org2-arrow-layer';
+    function clearOrg2Arrow() {
+        const old = document.getElementById(ORG2_ARROW_ID);
+        if (old) old.remove();
+    }
+    function drawOrg2Arrow(a) {
+        clearOrg2Arrow();
+        if (!a) return;
+        const wrap = document.querySelector('#tab-organize2 .cross-table-wrapper');
+        const cell = document.getElementById(a.cell);
+        if (!wrap || !cell) return;
+        const wr = wrap.getBoundingClientRect();
+        const cr = cell.getBoundingClientRect();
+        if (!wr.width || !cr.width) return;          // タブが かくれているときは 描かない
+        const NS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(NS, 'svg');
+        svg.id = ORG2_ARROW_ID;
+        svg.setAttribute('style',
+            'position:absolute; top:0; left:0; width:100%; height:100%;' +
+            'pointer-events:none; z-index:25; overflow:visible;');
+        // やじるしの先（▶）を 作る。SVG の innerHTML は 古い端末で
+        // うまく動かないことがあるので、部品を 1つずつ 組み立てている。
+        // markerUnits="userSpaceOnUse" にしないと、線の太さに合わせて
+        // 先っぽが 大きくなってしまう（前は それで 三角だけが 目立っていた）
+        const defs = document.createElementNS(NS, 'defs');
+        const marker = document.createElementNS(NS, 'marker');
+        marker.setAttribute('id', 'org2-arrow-head');
+        marker.setAttribute('markerUnits', 'userSpaceOnUse');
+        marker.setAttribute('markerWidth', '11');
+        marker.setAttribute('markerHeight', '9');
+        marker.setAttribute('refX', '10');
+        marker.setAttribute('refY', '4.5');
+        marker.setAttribute('orient', 'auto');
+        const head = document.createElementNS(NS, 'polygon');
+        head.setAttribute('points', '0 0, 11 4.5, 0 9');
+        head.setAttribute('fill', '#ff3333');
+        marker.appendChild(head); defs.appendChild(marker); svg.appendChild(defs);
+        const line = (x1, y1, x2, y2) => {
+            const l = document.createElementNS(NS, 'line');
+            l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+            l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+            l.setAttribute('stroke', '#ff3333');
+            l.setAttribute('stroke-width', '3');
+            l.setAttribute('stroke-linecap', 'round');
+            l.setAttribute('marker-end', 'url(#org2-arrow-head)');
+            svg.appendChild(l);
+        };
+        const cx = cr.left - wr.left + cr.width / 2;
+        const cy = cr.top - wr.top + cr.height / 2;
+        // 見出しの中から はじめて、ますの中へ 向かう。
+        // 見出しと ますは となりあっているので、線をひく前に
+        // 見出しがわへ 少しもどしておかないと やじるしが 逆を向いてしまう。
+        const IN = 14;                     // 見出しの中へ もどす長さ
+        const OUT = 0.30;                  // ますの どのあたりまで のばすか
+        // → 行の見出しから 右へ
+        const row = document.getElementById(a.row);
+        if (row) {
+            const rr = row.getBoundingClientRect();
+            line(rr.right - wr.left - IN, cy, cr.left - wr.left + cr.width * OUT, cy);
+        }
+        // ↓ 列の見出しから 下へ
+        const col = document.getElementById(a.col);
+        if (col) {
+            const cc = col.getBoundingClientRect();
+            line(cx, cc.bottom - wr.top - IN, cx, cr.top - wr.top + cr.height * OUT);
+        }
+        wrap.appendChild(svg);
+    }
+
+    // 整理②：上の表から、あてはまる人の列を えらぶ（㋐〜㋕の問題だけ）
     function org2PersonEls() {
-        const conds = [
-            (o,i) => o && !i,
-            (o,i) => o,
-            (o,i) => !o && i,
-            (o,i) => !o && !i,
-            (o,i) => !i,
-            () => true
-        ];
-        const f = conds[org2Step];
+        const st = org2Steps[org2Step] || {};
+        const f = st.cond;
+        if (!f) return [];
         const out = [];
         for (let n = 0; n < 10; n++) {
             const o = document.getElementById('org2-oto-'+n).innerText === '◯';
@@ -2440,22 +3051,38 @@
     }
 
     function currentHint() {
-        if (currentTab === 'graph')     return GRAPH_HINTS[graphStep - 1];
-        if (currentTab === 'read')      return (READ_HINTS[readType] || [])[readStep];
-        if (currentTab === 'organize')  return ORG_HINTS[orgStep];
-        if (currentTab === 'organize2') return ORG2_HINTS[org2Step];
+        if (currentTab === 'graph')  return GRAPH_HINTS[graphStep - 1];
+        if (currentTab === 'read') {
+            return (READ_HINTS[readType] || [])[readStep];
+        }
+        if (currentTab === 'organize') {
+            // ことばの問題は 毎回中身が変わるので、えらばれた問題から作る
+            if ((orgSteps[orgStep] || {}).word) return { text: orgWord.hint, els: orgWord.els };
+            return ORG_HINTS[orgStep];
+        }
+        if (currentTab === 'organize2') {
+            const st = org2Steps[org2Step] || {};
+            // ことばの問題は 下の表で しめす（やじるし か、ますの囲み）
+            if (st.word !== undefined) {
+                const w = org2Words[st.word] || {};
+                return { text: w.hint, els: w.els || [], arrow: w.arrow };
+            }
+            return ORG2_HINTS[org2Step];
+        }
         return null;
     }
 
     function clearHintMarks() {
         document.querySelectorAll('.hint-mark').forEach(el => el.classList.remove('hint-mark','hint-fill'));
         clearHighlight();
+        clearOrg2Arrow();
     }
 
     function hideHint() {
         const box = document.getElementById('hint-text');
         if (!box) return;
         hintOn = false;
+        hintSayIndex = 0;
         box.classList.remove('show');
         document.getElementById('btn-hint').textContent = '💡 ヒント';
         clearHintMarks();
@@ -2463,9 +3090,37 @@
         if (currentTab === 'read') drawReadCanvas();
     }
 
+    // ===== 文をえらぶ問題（読み取り③）だけ ヒントを 3通り 出す =====
+    // 正しい文には「なぜ 正しいと 分かるか」を、
+    // まちがいの文には「なぜ まちがいだと 分かるか」を グラフの上に しめす。
+    // ヒントボタンを おすたびに 1つめ→2つめ→3つめ→とじる と すすむ。
+    function isSayHintStep() {
+        return currentTab === 'read' && readType === 3 && readStep === 2
+            && (readData.t3says || []).length === 3;
+    }
+    function showSayHint() {
+        const box = document.getElementById('hint-text');
+        const btn = document.getElementById('btn-hint');
+        if (!hintOn) { hintOn = true; hintSayIndex = 0; }
+        else { hintSayIndex++; }
+        if (hintSayIndex > 2) { hideHint(); return; }
+        const s = readData.t3says[hintSayIndex];
+        clearHintMarks();
+        // いま たしかめている文の ボタンを 目立たせる
+        const btns = readOptButtons('rt3-who-opts');
+        if (btns[hintSayIndex]) btns[hintSayIndex].classList.add('hint-mark');
+        box.innerHTML = '<b>' + (hintSayIndex + 1) + 'つめの文</b><br>' + s.hintText;
+        box.classList.add('show');
+        btn.textContent = (hintSayIndex < 2)
+            ? '💡 つぎの文（' + (hintSayIndex + 2) + '／3）'
+            : '💡 ヒントをとじる';
+        drawReadCanvas();
+    }
+
     document.getElementById('btn-hint').addEventListener('click', () => {
         const box = document.getElementById('hint-text');
         const btn = document.getElementById('btn-hint');
+        if (isSayHintStep()) { showSayHint(); return; }
         if (hintOn) { hideHint(); return; }
         const h = currentHint();
         if (!h) return;
@@ -2478,9 +3133,16 @@
             const el = document.querySelector(sel);
             if (el) el.classList.add('hint-mark','hint-fill');
         });
+        // 整理②のことばの問題：下の表に やじるしを引き、交わるますを 囲む
+        if (h.arrow) {
+            drawOrg2Arrow(h.arrow);
+            const c = document.getElementById(h.arrow.cell);
+            if (c) c.classList.add('hint-mark');      // ぬりつぶさない（中の数が見えるように）
+        }
         // 整理①②では、いま答える欄の 行・列にも 色をつける
         showHighlight();
-        if (h.text) { box.textContent = h.text; box.classList.add('show'); }
+        const txt = h.dynText ? h.dynText() : h.text;
+        if (txt) { box.textContent = txt; box.classList.add('show'); }
         else { box.textContent = ''; box.classList.remove('show'); }
         btn.textContent = '💡 ヒントをとじる';
         if (currentTab === 'graph') drawCanvas();
@@ -2495,7 +3157,10 @@
             mount: '#chal-mount',
             total: 10,
             next: nextProblemForCurrentTab,
-            nextDelay: 2200,
+            // 小問ごとに数えるので すぐ次へ。セットが終わったときの
+            // はなまるの待ち時間は nextProblemForCurrentTab のほうで つけている
+            nextDelay: 700,
+            onFinish: () => { chalPhase = 'idle'; },
             record: false,            // true にすると「きょうの最高記録」を残す
             recordKey: 'oresen-graph'
         });
